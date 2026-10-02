@@ -10,9 +10,10 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const http = require("node:http");
+const net = require("node:net");
 const { parseArgs } = require("node:util");
 
-const VERSION = "0.1.1";
+const VERSION = "0.1.2";
 const SCHEMA_VERSION = 1;
 const DECISIONS_DIR = ".decisions";
 const TOOL_DIR = "_tool";
@@ -426,10 +427,11 @@ function addComment(tree, nid, text, author, replyTo = null) {
 
 function resolveComment(tree, nid, cid, resolved, author) {
   const node = getNode(tree, nid);
-  const c = node.comments.find((x) => x.id === cid);
-  if (!c) throw new DTError(`comment ${JSON.stringify(cid)} not found on ${nid}`);
+  const found = node.comments.find((x) => x.id === cid);
+  if (!found) throw new DTError(`comment ${JSON.stringify(cid)} not found on ${nid}`);
+  const c = threadRoot(node, found);
   c.resolved = resolved;
-  log(tree, author, resolved ? "resolve" : "reopen", nid, cid);
+  log(tree, author, resolved ? "resolve" : "reopen", nid, c.id);
   return c;
 }
 
@@ -465,10 +467,26 @@ function updateTreeMeta(tree, fields, author) {
   return tree;
 }
 
+function threadRoot(node, comment) {
+  const byId = new Map(node.comments.map((c) => [c.id, c]));
+  const seen = new Set([comment.id]);
+  let c = comment;
+  while (c.reply_to && byId.has(c.reply_to) && !seen.has(c.reply_to)) {
+    c = byId.get(c.reply_to);
+    seen.add(c.id);
+  }
+  return c;
+}
+
+/** Comment threads on a node: [root, ...replies], with replies-to-replies grouped under their root. */
 function threads(node) {
-  return node.comments
-    .filter((c) => !c.reply_to)
-    .map((r) => [r, ...node.comments.filter((c) => c.reply_to === r.id)]);
+  const groups = new Map();
+  for (const c of node.comments) {
+    const root = threadRoot(node, c);
+    if (!groups.has(root.id)) groups.set(root.id, [root]);
+    if (c !== root) groups.get(root.id).push(c);
+  }
+  return [...groups.values()];
 }
 
 /** Items waiting on `audience` ('agent' or 'human'). */
@@ -711,8 +729,30 @@ function send(res, code, body, ctype = "application/json") {
   res.end(data);
 }
 
-function handle(app, req, raw, res) {
+function allowedHost(hostHeader, boundHost) {
+  let hostname;
+  try {
+    hostname = new URL(`http://${hostHeader}`).hostname;
+  } catch {
+    return false;
+  }
+  const bare = hostname.replace(/^\[|\]$/g, "");
+  return hostname === "localhost" || net.isIP(bare) !== 0 || (Boolean(boundHost) && hostname === boundHost);
+}
+
+/** Blocks cross-site requests and DNS rebinding: Host must be localhost/an IP/the bound host, Origin must match Host. */
+function forbidden(req, boundHost) {
+  const host = req.headers.host || "";
+  if (!allowedHost(host, boundHost)) return `host ${JSON.stringify(host)} not allowed`;
+  const origin = req.headers.origin;
+  if (origin && origin !== `http://${host}`) return `cross-origin request from ${origin} rejected`;
+  return null;
+}
+
+function handle(app, req, raw, res, boundHost) {
   if (process.env.DTREE_VERBOSE) console.error(`${req.method} ${req.url}`);
+  const denied = forbidden(req, boundHost);
+  if (denied) return send(res, 403, { error: denied });
   try {
     const parts = new URL(req.url, "http://localhost").pathname.split("/").filter(Boolean).map(decodeURIComponent);
     if (req.method === "GET" && (parts.length === 0 || (parts.length === 1 && parts[0] === "index.html"))) {
@@ -735,11 +775,11 @@ function handle(app, req, raw, res) {
   }
 }
 
-function createServer(app) {
+function createServer(app, { host } = {}) {
   return http.createServer((req, res) => {
     const chunks = [];
     req.on("data", (c) => chunks.push(c));
-    req.on("end", () => handle(app, req, Buffer.concat(chunks), res));
+    req.on("end", () => handle(app, req, Buffer.concat(chunks), res, host));
   });
 }
 
@@ -984,7 +1024,7 @@ function run(a, store, author) {
       const scan = o.scan || [];
       if (!scan.length && !store.exists()) store.init();
       const app = new App([...(store.exists() ? [store.root] : []), ...(o["extra-project"] || [])], scan);
-      const server = createServer(app);
+      const server = createServer(app, { host });
       server.on("error", (e) => {
         console.error(`error: ${e.message}`);
         process.exit(1);
@@ -1112,7 +1152,7 @@ module.exports = {
   VERSION, SCHEMA_VERSION, NODE_TYPES, KINDS, STATUSES, TREE_STATUSES, LINK_TYPES, AUTHOR_TYPES,
   DTError, Store, App, findProjectRoot, scanProjects, slugify, validateSlug,
   addNode, updateNode, moveNode, deleteNode, chooseOption, addComment, resolveComment, addLink, removeLink,
-  updateTreeMeta, threads, inbox, review, summarize, renderText, renderStaticHtml, snapshotPayload,
+  updateTreeMeta, threadRoot, threads, inbox, review, summarize, renderText, renderStaticHtml, snapshotPayload,
   createServer, installSkill, parseCli, main,
 };
 

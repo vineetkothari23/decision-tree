@@ -90,4 +90,4 @@ global: -C <app-root>  --author NAME  --as agent|human  --json
 
 ## HTTP API (used by the viewer; agents should prefer the CLI)
 
-`GET /api/projects`, `GET /api/meta`, `POST /api/projects/<p>/trees`, `GET|PATCH /api/projects/<p>/trees/<slug>`, `POST .../nodes`, `PATCH|DELETE .../nodes/<id>`, `POST .../nodes/<id>/choose`, `POST .../nodes/<id>/comments`, `PATCH .../nodes/<id>/comments/<cid>`, `POST|DELETE .../nodes/<id>/links`. JSON bodies accept `author` and `author_type`.
+`GET /api/projects`, `GET /api/meta`, `POST /api/projects/<p>/trees`, `GET|PATCH /api/projects/<p>/trees/<slug>`, `POST .../nodes`, `PATCH|DELETE .../nodes/<id>`, `POST .../nodes/<id>/choose`, `POST .../nodes/<id>/comments`, `PATCH .../nodes/<id>/comments/<cid>`, `POST|DELETE .../nodes/<id>/links`. JSON bodies accept `author` and `author_type`. Requests whose `Origin` doesn't match the server, or whose `Host` isn't `localhost`, an IP address or the `--host` name, are rejected with 403.

@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const http = require("node:http");
 const { spawnSync } = require("node:child_process");
 
 const SCRIPT = path.join(__dirname, "..", "skills", "decision-tree", "scripts", "dtree.cjs");
@@ -108,6 +109,26 @@ test("comments thread, resolve, and drive both inboxes", () => {
     assert.deepEqual(dt.inbox(t, "human").map((i) => i.kind), ["needs-input"]);
     assert.throws(() => dt.addComment(t, "q2", "x", AGENT, "c999"), /not found/);
   });
+});
+
+test("replies to replies stay in their root thread", () => {
+  const store = new dt.Store(tmpdir());
+  sampleTree(store);
+  store.edit("add-sso", (t) => {
+    dt.addComment(t, "q2", "Which IdPs?", AGENT);
+    dt.addComment(t, "q2", "Okta and Azure AD", HUMAN, "c5");
+    dt.addComment(t, "q2", "Thanks, OIDC then", AGENT, "c6");
+    assert.deepEqual(dt.threads(t.nodes.q2).map((th) => th.map((c) => c.id)), [["c5", "c6", "c7"]]);
+    assert.equal(dt.inbox(t, "agent").length, 0);
+    assert.deepEqual(dt.inbox(t, "human").map((i) => i.thread), ["c5"]);
+    assert.equal(dt.review(t).some(([, issue]) => /unanswered/.test(issue)), false);
+    dt.resolveComment(t, "q2", "c7", true, HUMAN);
+    assert.equal(t.nodes.q2.comments[0].resolved, true);
+    assert.equal(dt.inbox(t, "human").length, 0);
+  });
+  const dir = store.root;
+  const out = cli(dir, "node", "add-sso", "q2").out;
+  assert.match(out, /c7 bot \(agent\).*Thanks, OIDC then/);
 });
 
 test("links, move, delete keep the graph consistent", () => {
@@ -280,4 +301,44 @@ test("HTTP API", async (t) => {
   assert.equal((await call("GET", "/nope")).status, 404);
   const bad = await fetch(`${base}${T}`, { method: "PATCH", body: "{not json" });
   assert.equal(bad.status, 400);
+});
+
+test("HTTP API rejects cross-origin and foreign-host requests", async (t) => {
+  const store = new dt.Store(tmpdir());
+  sampleTree(store);
+  const server = dt.createServer(new dt.App([store.root]));
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+  const port = server.address().port;
+  const send = (headers, method = "POST", p = "/api/projects/0/trees/add-sso/nodes/q2/comments") =>
+    new Promise((resolve, reject) => {
+      const req = http.request({ host: "127.0.0.1", port, method, path: p, headers }, (res) => {
+        res.resume();
+        res.on("end", () => resolve(res.statusCode));
+      });
+      req.on("error", reject);
+      req.end(method === "GET" ? undefined : JSON.stringify({ text: "hi" }));
+    });
+  const text = { "Content-Type": "text/plain" };
+  assert.equal(await send({ ...text, Origin: "https://evil.example" }), 403);
+  assert.equal(await send({ ...text, Host: `attacker.example:${port}` }), 403);
+  assert.equal(await send({ Host: `attacker.example:${port}` }, "GET", "/api/projects"), 403);
+  assert.equal(await send({ Origin: "null" }), 403);
+  assert.equal(store.load("add-sso").nodes.q2.comments.length, 0);
+  assert.equal(await send({ Origin: `http://127.0.0.1:${port}` }), 200);
+  assert.equal(await send({ Host: `localhost:${port}`, Origin: `http://localhost:${port}` }), 200);
+  assert.equal(await send({}), 200);
+  assert.equal(store.load("add-sso").nodes.q2.comments.length, 3);
+
+  const lan = dt.createServer(new dt.App([store.root]), { host: "devbox.local" });
+  await new Promise((resolve) => lan.listen(0, "127.0.0.1", resolve));
+  t.after(() => lan.close());
+  const lanPort = lan.address().port;
+  const status = await new Promise((resolve) => {
+    http.get({ host: "127.0.0.1", port: lanPort, path: "/api/projects", headers: { Host: `devbox.local:${lanPort}` } }, (res) => {
+      res.resume();
+      resolve(res.statusCode);
+    });
+  });
+  assert.equal(status, 200);
 });
