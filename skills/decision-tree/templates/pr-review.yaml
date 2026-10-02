@@ -1,0 +1,86 @@
+# Built-in template: review a pull request.
+# Answer each question with findings (note nodes) or concerns (comments), then
+# choose a verdict with a rationale that cites the nodes behind it.
+template: 1
+name: pr-review
+title: Review a pull request
+description: |
+  Structured review of a pull request. Work through intent, scope, approach,
+  placement, risk, tests and docs, record findings under each question, then
+  choose a verdict with a rationale.
+tree_status: active
+nodes:
+  - title: Is this the right problem, and does the PR solve it?
+    kind: why
+    body: |
+      - Read the PR description and linked issue; is the intent stated and justified?
+      - Does the change address the root cause, or only a symptom?
+      - Would a smaller change, config tweak, or no change be enough?
+
+  - title: What does the PR change?
+    kind: what
+    body: |
+      - Is the diff limited to the stated scope? Flag unrelated refactors, renames, or formatting churn.
+      - Which public APIs, CLI flags, config, schemas, or user-visible behavior change?
+      - Are behavior changes called out in the description?
+
+  - title: Is the approach sound?
+    kind: how
+    body: |
+      - What alternatives exist, and why is this design better (simpler, consistent with existing patterns)?
+      - Is the abstraction level right: no premature generalization, no copy-paste?
+      - Is the code readable without the PR description?
+    children:
+      - title: Is it correct on edge cases and failure paths?
+        kind: how
+        body: |
+          - Empty, null, very large, concurrent, and malformed inputs.
+          - Are errors handled, surfaced with useful messages, and never silently swallowed?
+          - Are resources (files, locks, connections) released on every path?
+
+  - title: Is the code in the right place?
+    kind: where
+    body: |
+      - Does each change live in the module that owns that responsibility?
+      - Does it introduce new coupling or circular dependencies?
+      - Does it duplicate an existing helper or utility that should be reused?
+
+  - title: What could this break?
+    kind: risk
+    body: |
+      - Security: input validation, auth/permission checks, injection, secrets in code or logs.
+      - Performance: new queries in loops, unbounded memory, hot-path work.
+      - Data: migrations reversible and safe on production-sized data? Backwards compatible with old clients, stored data, and config?
+
+  - title: Is it tested well enough?
+    kind: how
+    body: |
+      - Do new tests cover the change, including edge cases and the bug being fixed?
+      - Would the tests fail without the change?
+      - What was verified manually, and does CI pass?
+
+  - title: Are docs and changelog updated?
+    kind: what
+    body: |
+      - README, reference docs, and inline help match the new behavior.
+      - Changelog or release notes entry for user-visible changes.
+      - Upgrade or migration notes for breaking changes.
+
+  - title: Review verdict
+    type: decision
+    body: |
+      Choose after answering the questions above. The rationale must cite the
+      blocking findings (or state there are none).
+    children:
+      - title: Approve
+        type: option
+        pros: [Unblocks the author, Signals the change is ready to merge]
+        cons: [Shares responsibility for any missed issue, Remaining nits may never be addressed]
+      - title: Request changes
+        type: option
+        pros: [Blocks merge until blocking issues are fixed, Makes required changes explicit]
+        cons: [Adds a review round-trip, Can stall the PR if feedback is unclear]
+      - title: Comment only
+        type: option
+        pros: [Shares feedback without blocking, Fits questions or partial reviews]
+        cons: [Leaves merge readiness ambiguous, Concerns may be ignored]

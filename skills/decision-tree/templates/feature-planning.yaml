@@ -1,0 +1,92 @@
+# Built-in template: plan a new software feature.
+# Seeds the core questions only; options are feature-specific and must come from
+# investigating the codebase, except the generic rollout choice below.
+template: 1
+name: feature-planning
+title: Plan a feature
+description: |
+  Question-driven plan for a new feature. Answer why/who/what before how/where;
+  give every question 2-4 options with pros and cons, choose with a rationale,
+  and mark product calls needs-input instead of guessing.
+tree_status: draft
+nodes:
+  - title: Why build this, and why now?
+    kind: why
+    body: |
+      - What problem does it solve, and what evidence shows it is real (tickets, data, requests)?
+      - What happens if we do nothing, or do it next quarter?
+      - Is this the root problem, or a symptom of something cheaper to fix?
+
+  - title: Who uses it, and who has a stake in it?
+    kind: who
+    body: |
+      - Which user segments or roles are affected, and how many?
+      - Who owns the decision, who reviews it, who supports it after launch?
+      - Which other teams or services depend on the parts we touch?
+
+  - title: What is in scope, and what is explicitly out?
+    kind: what
+    body: |
+      - List the smallest version that delivers the outcome; everything else is out or later.
+      - Which edge cases, platforms, locales or plans are excluded on purpose?
+      - What existing behavior must not change?
+    children:
+      - title: What does success look like, and how is it measured?
+        kind: what
+        status: needs-input
+        assignee: human
+        body: |
+          - Propose 1-3 measurable metrics with a baseline and target.
+          - How and where is each metric collected, and when is it reviewed?
+          - What result would make us roll back or abandon the feature?
+
+  - title: How should we build it?
+    kind: how
+    body: |
+      - Compare at least two approaches, including build vs. buy/reuse an existing library or service.
+      - Which existing patterns in the codebase does each approach follow or break?
+      - Rough effort, maintenance cost, and reversibility of each.
+    children:
+      - title: What data model and API changes are needed?
+        kind: how
+        body: |
+          - New or changed tables, fields, events, config; are any migrations destructive?
+          - New or changed endpoints, payloads, or public interfaces; are they backwards compatible?
+          - Who else consumes these contracts, and how are they versioned?
+
+  - title: Where does it live in the codebase and architecture?
+    kind: where
+    body: |
+      - Which modules, services, or packages change; which new ones (if any) are created?
+      - Which layer owns the logic (UI, API, worker, database), and why there?
+      - Does it add coupling between components that are currently independent?
+
+  - title: How does it reach users, and in what order?
+    kind: when
+    body: |
+      - Sequence the work so each step is shippable and reviewable on its own.
+      - What must be migrated or backfilled, and can it run before the code ships?
+      - How is it rolled back if something goes wrong after release?
+    children:
+      - title: Ship behind a feature flag
+        type: option
+        pros: [Gradual rollout and instant rollback, Can merge incomplete work safely, Enables A/B measurement]
+        cons: [Two code paths to test and maintain, Flag must be cleaned up later, Needs flag infrastructure]
+      - title: Big-bang release
+        type: option
+        pros: [Single code path, No flag cleanup, Simplest for small or internal changes]
+        cons: [All users exposed at once, Rollback means a redeploy or revert, Hard to measure impact in isolation]
+
+  - title: How will we test it?
+    kind: how
+    body: |
+      - Which unit, integration, and end-to-end tests prove the success criteria?
+      - Which existing tests cover the code we change, and which gaps must be filled first?
+      - What needs manual or staged verification (UI, real integrations, load)?
+
+  - title: What are the security, privacy, and failure risks?
+    kind: risk
+    body: |
+      - Does it touch auth, permissions, secrets, or personal data; what is the threat model?
+      - What happens on partial failure, timeouts, retries, or bad input?
+      - Performance or cost impact at current and 10x scale?
