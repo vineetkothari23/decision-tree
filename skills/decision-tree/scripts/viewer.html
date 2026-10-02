@@ -186,7 +186,16 @@ async function mutate(method, path, body){
 // ------------------------------------------------------------ helpers on tree
 const nodes = () => S.tree ? S.tree.nodes : {};
 const kids = id => Object.values(nodes()).filter(n => n.parent === id);
-function threads(n){ return n.comments.filter(c => !c.reply_to).map(r => [r, ...n.comments.filter(c => c.reply_to === r.id)]); }
+function threadRoot(n, c){
+  const byId = new Map(n.comments.map(x => [x.id, x])), seen = new Set([c.id]);
+  while (c.reply_to && byId.has(c.reply_to) && !seen.has(c.reply_to)){ c = byId.get(c.reply_to); seen.add(c.id); }
+  return c;
+}
+function threads(n){
+  const g = new Map();
+  for (const c of n.comments){ const r = threadRoot(n, c); if (!g.has(r.id)) g.set(r.id, [r]); if (c !== r) g.get(r.id).push(c); }
+  return [...g.values()];
+}
 function openThreads(n){ return threads(n).filter(t => !t[0].resolved).length; }
 function waiting(aud){
   const other = aud === "agent" ? "human" : "agent", out = [];
