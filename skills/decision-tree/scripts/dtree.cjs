@@ -1341,6 +1341,17 @@ function createMode(store, name, file, { user = false, force = false } = {}) {
   }
   if (text === null) text = stringifyYaml(data);
   validateTemplate(parseYaml(text, src), { label, name });
+  return writeMode(store, name, text, { user, force });
+}
+
+/** Saves a tree's structure (see treeToTemplate) as the project mode `<name>`. */
+function saveTreeAsMode(store, tree, name, { force = false } = {}) {
+  const text = stringifyYaml(treeToTemplate(tree, name));
+  const tpl = validateTemplate(parseYaml(text, `${name}.yaml`), { label: JSON.stringify(name), name });
+  return { ...writeMode(store, name, text, { force }), nodes: countTemplateNodes(tpl.nodes) };
+}
+
+function writeMode(store, name, text, { user = false, force = false } = {}) {
   const { source, dir } = modeDir(store, user);
   const dest = path.join(dir, `${name}.yaml`);
   const existing = templateFiles(dir, name);
@@ -1455,6 +1466,11 @@ function api(app, method, p, body) {
   }
   if (method === "GET" && p.length === 3 && p[0] === "projects" && p[2] === "templates") {
     return listTemplates(app.store(p[1]));
+  }
+  if (method === "POST" && p.length === 3 && p[0] === "projects" && p[2] === "templates") {
+    const store = app.store(p[1]);
+    const name = validateTemplateName(String(need(body, "name")));
+    return saveTreeAsMode(store, store.load(String(need(body, "tree"))), name, { force: body.force === true });
   }
   if (p.length < 3 || p[0] !== "projects" || p[2] !== "trees") throw new DTError("unknown endpoint");
   const store = app.store(p[1]);
@@ -2051,7 +2067,7 @@ module.exports = {
   updateTreeMeta, threadRoot, threads, inbox, review, summarize, renderText, renderStaticHtml, snapshotPayload,
   createServer, installSkill, parseCli, main,
   parseYaml, stringifyYaml, validateTemplate, loadTemplate, resolveTemplate, listTemplates, templateDirs,
-  applyTemplate, treeToTemplate, exportTemplate, renderTemplate, createMode, removeMode,
+  applyTemplate, treeToTemplate, exportTemplate, renderTemplate, createMode, saveTreeAsMode, removeMode,
   builtinTemplatesDir, userTemplatesDir,
 };
 

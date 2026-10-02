@@ -863,3 +863,56 @@ test("HTTP API lists templates and creates trees from them", async (t) => {
   assert.equal(await raw({ "Content-Type": "text/plain", Origin: "http://evil.example" }, "POST", "/api/projects/0/trees", evil), 403);
   assert.deepEqual(store.slugs(), ["from-api", "own-desc"]);
 });
+
+test("HTTP API saves a tree as a project template", async (t) => {
+  const store = new dt.Store(tmpdir());
+  store.init();
+  const restore = { XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME, DTREE_TEMPLATES_PATH: process.env.DTREE_TEMPLATES_PATH };
+  process.env.XDG_CONFIG_HOME = tmpdir();
+  delete process.env.DTREE_TEMPLATES_PATH;
+  const server = dt.createServer(new dt.App([store.root]));
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => {
+    server.close();
+    for (const [k, v] of Object.entries(restore)) if (v === undefined) delete process.env[k]; else process.env[k] = v;
+  });
+  const port = server.address().port;
+  const call = async (method, p, body, headers = {}) => {
+    const r = await fetch(`http://127.0.0.1:${port}${p}`, { method, headers: { "Content-Type": "application/json", ...headers }, body: body && JSON.stringify(body) });
+    return { status: r.status, data: await r.json() };
+  };
+  const src = store.createTree("src", "Source tree", "Plan it", AGENT);
+  store.edit("src", (tree) => {
+    const q = dt.addNode(tree, { parent: tree.root_id, type: "question", title: "Which store?", kind: "how", body: "Pick one", author: AGENT });
+    const o = dt.addNode(tree, { parent: q.id, type: "option", title: "Postgres", pros: ["SQL"], cons: ["Ops"], author: AGENT });
+    dt.addNode(tree, { parent: q.id, type: "option", title: "SQLite", author: AGENT });
+    dt.chooseOption(tree, o.id, "because", AGENT);
+    dt.addComment(tree, q.id, "hmm", HUMAN);
+  });
+  assert.equal(src.id, "src");
+  let r = await call("POST", "/api/projects/0/templates", { tree: "src", name: "my-plan" });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.name, "my-plan");
+  assert.equal(r.data.source, "project");
+  assert.equal(r.data.nodes, 3);
+  assert.equal(r.data.path, path.join(store.dir, "templates", "my-plan.yaml"));
+  const tpl = dt.resolveTemplate(store, "my-plan");
+  assert.equal(tpl.title, "Source tree");
+  assert.deepEqual(tpl.nodes.map((n) => [n.title, n.kind, n.status, n.children.map((c) => [c.title, c.type, c.status, c.pros])]),
+    [["Which store?", "how", "open", [["Postgres", "option", "open", ["SQL"]], ["SQLite", "option", "open", []]]]]);
+  assert.doesNotMatch(fs.readFileSync(r.data.path, "utf8"), /hmm|because|q2|chosen/);
+  r = await call("POST", "/api/projects/0/trees", { title: "Reuse", template: "my-plan" });
+  assert.equal(r.status, 200);
+  assert.equal(Object.keys(r.data.nodes).length, 4);
+  r = await call("POST", "/api/projects/0/templates", { tree: "src", name: "my-plan" });
+  assert.equal(r.status, 400);
+  assert.match(r.data.error, /already exists/);
+  assert.equal((await call("POST", "/api/projects/0/templates", { tree: "src", name: "my-plan", force: true })).status, 200);
+  assert.match((await call("POST", "/api/projects/0/templates", { tree: "src", name: "../x" })).data.error, /invalid template name/);
+  assert.match((await call("POST", "/api/projects/0/templates", { tree: "nope", name: "x" })).data.error, /not found/);
+  assert.match((await call("POST", "/api/projects/0/templates", { tree: "reuse" })).data.error, /missing "name"/);
+  store.createTree("empty", "Empty", "", AGENT);
+  assert.match((await call("POST", "/api/projects/0/templates", { tree: "empty", name: "empty" })).data.error, /no nodes/);
+  assert.equal((await call("POST", "/api/projects/0/templates", { tree: "src", name: "evil" }, { Origin: "http://evil.example" })).status, 403);
+  assert.deepEqual(fs.readdirSync(path.join(store.dir, "templates")), ["my-plan.yaml"]);
+});

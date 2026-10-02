@@ -66,3 +66,6 @@ keys are rejected with a file:line error.
 To customize a built-in, copy it into `.decisions/templates/` (or a user directory) under the same
 name; the earlier location wins. Keep templates generic: seed questions and prompts, and only
 pre-fill options that apply to every tree created from the template.
+
+To turn an existing tree into a project template, click "Save as template" on its overview in
+`dtree serve`, or run `dtree template export <tree> -o x.yaml` then `dtree create-mode <name> --yaml x.yaml`.
