@@ -12,7 +12,7 @@ const path = require("node:path");
 const http = require("node:http");
 const { parseArgs } = require("node:util");
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 const SCHEMA_VERSION = 1;
 const DECISIONS_DIR = ".decisions";
 const TOOL_DIR = "_tool";
