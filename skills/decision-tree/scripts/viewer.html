@@ -536,6 +536,7 @@ function renderOverview(d){
   for (const n of Object.values(t.nodes)) sum[n.status] = (sum[n.status]||0) + 1;
   d.append(el("h2", {}, t.title), el("div", {class:"row tight", style:{gap:"6px"}}, pill(t.status), el("span", {class:"cm"}, `${Object.keys(t.nodes).length} nodes · rev ${t.revision} · updated ${ago(t.updated_at)}${t.template ? " · template " + t.template : ""}`)));
   if (t.description) d.append(el("p", {class:"prewrap"}, t.description));
+  d.append(el("div", {class:"edit-only", style:{margin:"6px 0"}}, el("button", {class:"small", title:"Save this tree's questions and options (no statuses, comments or history) as a reusable template in .decisions/templates/", onclick:saveAsTemplate}, "Save as template")));
   d.append(el("div", {}, ...Object.entries(sum).map(([s, c]) => el("span", {style:{marginRight:"6px"}}, pill(s), " ", c))));
   const sec = (title, items, empty) => {
     d.append(el("h3", {}, `${title} (${items.length})`));
@@ -552,6 +553,18 @@ function renderOverview(d){
   const openQ = Object.values(t.nodes).filter(n => n.type === "question" && ["open", "exploring", "blocked"].includes(n.status));
   sec("Open questions", openQ.map(n => ({n})), "All questions are resolved.");
   d.append(el("p", {class:"cm", style:{marginTop:"18px"}}, "Click a node to see details, discuss, change status or add children. Drag to pan, scroll to zoom."));
+}
+
+async function saveAsTemplate(){
+  const t = S.tree, pid = S.pid;
+  const name = (prompt("Template name (lowercase letters, digits, - and _):", t.id.toLowerCase().replace(/[^a-z0-9_-]+/g, "-")) || "").trim();
+  if (!name) return;
+  try {
+    const clash = (await api("GET", `/projects/${pid}/templates`)).find(r => r.name === name && r.active);
+    if (clash && !confirm(clash.source === "project" ? `Overwrite the project template "${name}"?` : `A ${clash.source} template "${name}" exists; save a project template that takes its place?`)) return;
+    const r = await api("POST", `/projects/${pid}/templates`, {tree:t.id, name, force:!!clash && clash.source === "project"});
+    alert(`Saved template "${r.name}" (${r.nodes} nodes) to ${r.path}.\nPick it in "+ tree" or run: dtree new "<title>" --template ${r.name}`);
+  } catch(e){ alert(e.message); }
 }
 
 function renderAll(){ setHash(); renderSidebar(); renderToolbar(); renderCanvas(); renderDetails(); }

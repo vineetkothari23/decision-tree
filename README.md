@@ -153,7 +153,9 @@ dtree remove-mode custom-planning [--user]                               # built
 ```
 
 A project or user mode with a built-in's name shadows it (`dtree modes` shows which one wins).
-The viewer's "+ tree" dialog offers every available template.
+The viewer's "+ tree" dialog offers every available template, and "Save as template" on a tree's
+overview saves its questions, options and nesting (not statuses, comments or history) as a project
+mode in `.decisions/templates/<name>.yaml`.
 
 ## Layout
 
