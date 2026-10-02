@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decision Trees</title>
+<link rel="icon" href="data:,">
+<style>
+:root{--bg:#f6f7fb;--panel:#fff;--line:#e3e6ee;--text:#1d2330;--muted:#6b7385;--accent:#4f46e5;
+--goal:#7c3aed;--question:#2563eb;--option:#0d9488;--decision:#16a34a;--task:#d97706;--note:#6b7280;}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font:13px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--text);background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 10px}
+button:hover{border-color:#c5cad6;background:#fafbff}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{filter:brightness(1.08)}
+button.danger{color:#b91c1c;border-color:#f3c4c4}
+button.small{padding:2px 7px;font-size:12px}
+button:disabled{opacity:.5;cursor:default}
+input,select,textarea{border:1px solid var(--line);border-radius:6px;padding:5px 7px;background:#fff;width:100%}
+textarea{resize:vertical;min-height:54px}
+label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin:10px 0 3px}
+header{height:46px;display:flex;align-items:center;gap:14px;padding:0 14px;background:#141824;color:#e9ecf5}
+header .logo{font-weight:700;font-size:15px;letter-spacing:.01em}
+header .crumb{color:#9aa3b8}
+header .spacer{flex:1}
+header input{width:150px;background:#232a3b;border-color:#343d52;color:#fff;padding:3px 7px}
+header .live{font-size:11px;color:#7ee2a8}
+header .live.off{color:#f0a3a3}
+#app{display:grid;grid-template-columns:260px 1fr 400px;height:calc(100% - 46px)}
+#sidebar{background:var(--panel);border-right:1px solid var(--line);overflow:auto;padding:10px}
+#sidebar .project{margin-bottom:14px}
+#sidebar .phead{display:flex;align-items:center;gap:6px;font-weight:700;padding:4px 2px}
+#sidebar .phead .path{font-weight:400;color:var(--muted);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.tree-item{padding:7px 8px;border-radius:7px;cursor:pointer;border:1px solid transparent;margin:2px 0}
+.tree-item:hover{background:#f3f4fb}
+.tree-item.active{background:#eef0ff;border-color:#d6d9ff}
+.tree-item .t{font-weight:600}
+.tree-item .b{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:0 6px;border-radius:9px;background:#eef0f5;color:#465066;white-space:nowrap}
+.badge.warn{background:#fff1e0;color:#a55b00}
+.badge.agent{background:#e7f0ff;color:#1f4fb5}
+.badge.human{background:#fde9f3;color:#a3215f}
+main{display:flex;flex-direction:column;min-width:0}
+#toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+#toolbar .title{font-size:15px;font-weight:700;margin-right:6px}
+#toolbar input,#toolbar select{width:auto}
+#toolbar .seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+#toolbar .seg button{border:0;border-radius:0;border-right:1px solid var(--line)}
+#toolbar .seg button:last-child{border-right:0}
+#toolbar .seg button.on{background:#eef0ff;color:var(--accent);font-weight:600}
+#banner{display:none;background:#fff7d6;border-bottom:1px solid #f0e2a0;padding:6px 12px}
+#canvas{flex:1;position:relative;overflow:hidden}
+#canvas.graph{cursor:grab;background-image:radial-gradient(#d9dce6 1px,transparent 1px);background-size:22px 22px}
+#canvas.graph.dragging{cursor:grabbing}
+#world{position:absolute;left:0;top:0;transform-origin:0 0}
+#world svg{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.card{position:absolute;width:240px;height:84px;background:#fff;border:1px solid var(--line);border-left:5px solid var(--c);border-radius:9px;padding:6px 9px;
+  box-shadow:0 1px 2px rgba(20,24,36,.06);cursor:pointer;display:flex;flex-direction:column;gap:3px;transition:box-shadow .1s}
+.card:hover{box-shadow:0 3px 10px rgba(20,24,36,.12)}
+.card.sel{outline:2px solid var(--accent);outline-offset:1px}
+.card.dim{opacity:.28}
+.card.hit{box-shadow:0 0 0 3px #fde68a}
+.card .top{display:flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;color:var(--c);text-transform:uppercase;letter-spacing:.03em}
+.card .top .id{color:var(--muted);font-weight:500;margin-left:auto;text-transform:none}
+.card .ttl{font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3}
+.card .bot{display:flex;align-items:center;gap:5px;margin-top:auto;white-space:nowrap;overflow:hidden}
+.card.st-rejected .ttl{text-decoration:line-through;color:var(--muted)}
+.card.st-rejected,.card.st-deferred{background:#fafafa}
+.card.st-chosen{background:#f0fdf4;border-color:#bbf7d0;border-left-color:var(--c)}
+.toggle{position:absolute;right:-11px;top:31px;width:22px;height:22px;border-radius:11px;padding:0;font-size:11px;line-height:20px;text-align:center;background:#fff}
+.pill{font-size:10.5px;padding:0 7px;border-radius:9px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.s-open{background:#eef0f5;color:#465066}.s-exploring{background:#e0ecff;color:#1d4ed8}
+.s-needs-input{background:#ffedd5;color:#b45309;border-color:#fdba74}.s-blocked{background:#fee2e2;color:#b91c1c}
+.s-decided{background:#dcfce7;color:#15803d}.s-chosen{background:#16a34a;color:#fff}
+.s-rejected{background:#f1f1f1;color:#8a8f99}.s-deferred{background:#eceff4;color:#5b6577}.s-done{background:#d1fae5;color:#047857}
+.s-draft{background:#eef0f5;color:#465066}.s-active{background:#e0ecff;color:#1d4ed8}.s-implemented{background:#d1fae5;color:#047857}.s-archived{background:#f1f1f1;color:#8a8f99}
+.cm{font-size:11px;color:var(--muted)}
+.cm.open{color:#b45309;font-weight:600}
+#outline{position:absolute;inset:0;overflow:auto;padding:14px 18px}
+#outline ul{list-style:none;margin:0;padding-left:22px;border-left:1px dashed #d4d8e2}
+#outline>ul{border-left:0;padding-left:0}
+#outline li{margin:3px 0}
+.orow{display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:6px;cursor:pointer;border-left:4px solid var(--c);background:#fff;border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.orow.sel{outline:2px solid var(--accent)}
+.orow.dim{opacity:.3}
+.orow .ty{font-size:10.5px;font-weight:700;color:var(--c);text-transform:uppercase;min-width:74px}
+.orow .tt{flex:1}
+.orow.st-rejected .tt{text-decoration:line-through;color:var(--muted)}
+#activity{position:absolute;inset:0;overflow:auto;padding:14px 18px}
+.act{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.act .when{color:var(--muted);width:150px;flex:none}
+.empty{color:var(--muted);padding:40px;text-align:center}
+#details{background:var(--panel);border-left:1px solid var(--line);overflow:auto;padding:12px 14px 40px}
+#details h2{font-size:15px;margin:2px 0 6px}
+#details h3{font-size:12px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em;margin:18px 0 6px;border-top:1px solid var(--line);padding-top:12px}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:1}
+.row.tight>*{flex:none}
+.prewrap{white-space:pre-wrap;word-break:break-word}
+.ilist{margin:4px 0;padding-left:18px}
+.thread{border:1px solid var(--line);border-radius:8px;padding:8px;margin:8px 0;background:#fcfcfe}
+.thread.resolved{opacity:.65}
+.msg{padding:5px 0}
+.msg+.msg{border-top:1px dashed var(--line);margin-left:14px}
+.msg .meta{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.msg .who{font-weight:700;color:var(--text)}
+.wait{display:block;padding:6px 8px;border:1px solid var(--line);border-radius:7px;margin:5px 0;cursor:pointer;background:#fff}
+.wait:hover{border-color:#c5cad6}
+.chip{display:inline-flex;gap:4px;align-items:center;padding:2px 8px;border:1px solid var(--line);border-radius:12px;margin:2px;cursor:pointer;background:#fff;font-size:12px}
+.chip .x{color:#b91c1c;margin-left:3px}
+dialog{border:1px solid var(--line);border-radius:10px;padding:16px;width:420px}
+dialog::backdrop{background:rgba(20,24,36,.35)}
+.legend{display:flex;gap:10px;font-size:11px;color:var(--muted);margin-left:auto}
+.legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--c);margin-right:4px;vertical-align:-1px}
+.ro .edit-only{display:none!important}
+</style>
+<!--DTREE_STATIC-->
+</head>
+<body>
+<header>
+  <span class="logo">Decision Trees</span>
+  <span class="crumb" id="crumb"></span>
+  <span class="spacer"></span>
+  <span class="edit-only" style="font-size:12px;color:#9aa3b8">You:</span>
+  <input id="me" class="edit-only" placeholder="your name">
+  <span class="live" id="live"></span>
+</header>
+<div id="app">
+  <aside id="sidebar"></aside>
+  <main>
+    <div id="toolbar"></div>
+    <div id="banner"></div>
+    <div id="canvas"></div>
+  </main>
+  <section id="details"></section>
+</div>
+<dialog id="dlg"></dialog>
+<script>
+"use strict";
+const STATIC = window.DTREE_STATIC || null;
+const RO = !!STATIC;
+if (RO) document.body.classList.add("ro");
+const COLORS = {goal:"var(--goal)",question:"var(--question)",option:"var(--option)",decision:"var(--decision)",task:"var(--task)",note:"var(--note)"};
+const W = 240, H = 84, GX = 70, GY = 18;
+const S = {projects:[], meta:null, pid:null, slug:null, tree:null, sel:null, view:localStorage.getItem("dt.view")||"graph",
+  q:"", fstatus:"", collapsed:new Set(), zoom:1, panX:40, panY:40, dirty:false, online:true, needFit:true};
+
+const $ = s => document.querySelector(s);
+function el(tag, attrs, ...kids){
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs||{})){
+    if (v == null || v === false) continue;
+    if (k === "class") e.className = v;
+    else if (k === "style" && typeof v === "object") for (const [sk, sv] of Object.entries(v)) sk.startsWith("--") ? e.style.setProperty(sk, sv) : (e.style[sk] = sv);
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "value") e.value = v;
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) e.append(k.nodeType ? k : String(k));
+  return e;
+}
+const pill = (st) => el("span", {class:"pill s-"+st}, st);
+const typeLabel = n => n.type === "question" && n.kind ? "Q · " + n.kind : n.type;
+const fmt = ts => ts ? new Date(ts).toLocaleString() : "";
+const ago = ts => { if (!ts) return ""; const s=(Date.now()-new Date(ts))/1000;
+  if (s<60) return "just now"; if (s<3600) return Math.floor(s/60)+"m ago"; if (s<86400) return Math.floor(s/3600)+"h ago"; return Math.floor(s/86400)+"d ago"; };
+const me = () => ($("#me").value.trim() || "human");
+$("#me").value = localStorage.getItem("dt.me") || "";
+$("#me").addEventListener("change", () => localStorage.setItem("dt.me", $("#me").value.trim()));
+
+async function api(method, path, body){
+  const opts = {method, headers:{"Content-Type":"application/json"}};
+  if (body !== undefined) opts.body = JSON.stringify({author:me(), author_type:"human", ...body});
+  const r = await fetch("/api"+path, opts);
+  const data = await r.json().catch(() => ({error:"bad response"}));
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+async function mutate(method, path, body){
+  try { S.tree = await api(method, `/projects/${S.pid}/trees/${encodeURIComponent(S.slug)}${path}`, body||{}); S.dirty=false; renderAll(); refreshProjects(); return true; }
+  catch(e){ alert(e.message); return false; }
+}
+
+// ------------------------------------------------------------ helpers on tree
+const nodes = () => S.tree ? S.tree.nodes : {};
+const kids = id => Object.values(nodes()).filter(n => n.parent === id);
+function threads(n){ return n.comments.filter(c => !c.reply_to).map(r => [r, ...n.comments.filter(c => c.reply_to === r.id)]); }
+function openThreads(n){ return threads(n).filter(t => !t[0].resolved).length; }
+function waiting(aud){
+  const other = aud === "agent" ? "human" : "agent", out = [];
+  for (const n of Object.values(nodes())){
+    for (const t of threads(n)) if (!t[0].resolved && t[t.length-1].author_type === other) out.push({n, t, kind:"comment"});
+    if (aud === "human" && n.status === "needs-input") out.push({n, kind:"needs-input"});
+  }
+  return out;
+}
+function matches(n){
+  if (S.fstatus && n.status !== S.fstatus) return false;
+  if (!S.q) return true;
+  const q = S.q.toLowerCase();
+  return [n.id, n.title, n.body, n.rationale, ...(n.pros||[]), ...(n.cons||[]), ...n.comments.map(c => c.text)].join(" ").toLowerCase().includes(q);
+}
+function loadCollapsed(){ try { S.collapsed = new Set(JSON.parse(localStorage.getItem(`dt.col.${S.pid}.${S.slug}`)||"[]")); } catch { S.collapsed = new Set(); } }
+function saveCollapsed(){ localStorage.setItem(`dt.col.${S.pid}.${S.slug}`, JSON.stringify([...S.collapsed])); }
+
+// ------------------------------------------------------------ routing / data
+function setHash(){ const h = S.slug ? `#/p/${S.pid}/t/${encodeURIComponent(S.slug)}${S.sel?"/n/"+S.sel:""}` : ""; if (location.hash !== h) history.replaceState(null, "", h || location.pathname); }
+function parseHash(){ const m = location.hash.match(/^#\/p\/([^/]+)\/t\/([^/]+)(?:\/n\/([^/]+))?/); return m ? {pid:m[1], slug:decodeURIComponent(m[2]), sel:m[3]||null} : null; }
+
+async function refreshProjects(){
+  if (RO) { S.projects = STATIC.projects; renderSidebar(); return; }
+  try {
+    S.projects = await api("GET", "/projects");
+    S.online = true;
+    if (S.tree){
+      const p = S.projects.find(p => p.id === S.pid), t = p && p.trees.find(t => t.id === S.slug);
+      if (t && t.revision !== S.tree.revision){
+        if (S.dirty) showBanner(true); else await openTree(S.pid, S.slug, S.sel, true);
+      }
+    }
+  } catch { S.online = false; }
+  $("#live").textContent = RO ? "read-only snapshot" + (STATIC.generated_at ? " · " + fmt(STATIC.generated_at) : "") : (S.online ? "● live" : "● offline");
+  $("#live").className = "live" + (S.online || RO ? "" : " off");
+  renderSidebar();
+}
+function showBanner(on){
+  const b = $("#banner"); b.style.display = on ? "block" : "none"; b.replaceChildren();
+  if (on) b.append("This tree was changed by someone else while you were editing. ",
+    el("button", {class:"small", onclick:() => { S.dirty=false; showBanner(false); openTree(S.pid, S.slug, S.sel, true); }}, "Reload (discard my edits)"));
+}
+async function openTree(pid, slug, sel, keepView){
+  try { S.tree = RO ? STATIC.trees[`${pid}/${slug}`] : await api("GET", `/projects/${pid}/trees/${encodeURIComponent(slug)}`); }
+  catch(e){ S.tree = null; alert(e.message); return; }
+  const switched = S.pid !== pid || S.slug !== slug;
+  S.pid = pid; S.slug = slug; S.sel = sel && S.tree.nodes[sel] ? sel : (keepView ? (S.tree.nodes[S.sel] ? S.sel : null) : null);
+  if (switched){ loadCollapsed(); S.needFit = true; S.dirty = false; showBanner(false); }
+  renderAll();
+}
+function select(id){
+  if (S.dirty && id !== S.sel && !confirm("Discard unsaved edits on this node?")) return;
+  S.dirty = false; S.sel = id;
+  if (id){ let p = nodes()[id] && nodes()[id].parent; let changed=false; while (p){ if (S.collapsed.delete(p)) changed=true; p = nodes()[p].parent; } if (changed) saveCollapsed(); }
+  renderAll();
+}
+
+// ------------------------------------------------------------ sidebar
+function renderSidebar(){
+  const sb = $("#sidebar"); sb.replaceChildren();
+  if (!S.projects.length) sb.append(el("div", {class:"empty"}, "No projects with a .decisions folder found."));
+  for (const p of S.projects){
+    const box = el("div", {class:"project"},
+      el("div", {class:"phead"}, el("span", {}, p.name), el("span", {class:"path", title:p.path}, p.path),
+        el("button", {class:"small edit-only", title:"New decision tree", onclick:() => newTreeDialog(p)}, "+ tree")));
+    if (!p.trees.length) box.append(el("div", {class:"cm", style:{padding:"4px 8px"}}, "no trees yet"));
+    for (const t of p.trees){
+      box.append(el("div", {class:"tree-item" + (p.id === S.pid && t.id === S.slug ? " active" : ""), onclick:() => openTree(p.id, t.id)},
+        el("div", {class:"t"}, t.title),
+        el("div", {class:"b"}, pill(t.status || "draft"),
+          el("span", {class:"badge"}, `${t.node_count||0} nodes`),
+          t.open_questions ? el("span", {class:"badge"}, `${t.open_questions} open Q`) : null,
+          t.needs_input ? el("span", {class:"badge warn"}, `${t.needs_input} needs input`) : null,
+          t.waiting_on_human ? el("span", {class:"badge human", title:"waiting on humans"}, `${t.waiting_on_human} for humans`) : null,
+          t.waiting_on_agent ? el("span", {class:"badge agent", title:"waiting on agents"}, `${t.waiting_on_agent} for agents`) : null),
+        el("div", {class:"cm"}, "updated " + ago(t.updated_at))));
+    }
+    sb.append(box);
+  }
+}
+function newTreeDialog(p){
+  const d = $("#dlg"); d.replaceChildren();
+  const title = el("input", {placeholder:"e.g. Add SSO login"}), desc = el("textarea", {placeholder:"What is the feature and what outcome do we want?"});
+  d.append(el("h3", {style:{marginTop:0}}, `New decision tree in ${p.name}`), el("label", {}, "Feature / goal"), title, el("label", {}, "Description"), desc,
+    el("div", {class:"row tight", style:{justifyContent:"flex-end", marginTop:"14px"}},
+      el("button", {onclick:() => d.close()}, "Cancel"),
+      el("button", {class:"primary", onclick: async () => {
+        try { const t = await api("POST", `/projects/${p.id}/trees`, {title:title.value, description:desc.value}); d.close(); await refreshProjects(); openTree(p.id, t.id); }
+        catch(e){ alert(e.message); } }}, "Create")));
+  d.showModal(); title.focus();
+}
+
+// ------------------------------------------------------------ toolbar
+function renderToolbar(){
+  const tb = $("#toolbar"); tb.replaceChildren();
+  if (!S.tree){ tb.append(el("span", {class:"cm"}, "Select a decision tree on the left.")); $("#crumb").textContent=""; return; }
+  const proj = S.projects.find(p => p.id === S.pid);
+  $("#crumb").textContent = `${proj ? proj.name : ""} / ${S.tree.title}`;
+  const seg = el("span", {class:"seg"}, ...["graph","outline","activity"].map(v =>
+    el("button", {class: S.view === v ? "on" : "", onclick:() => { S.view = v; localStorage.setItem("dt.view", v); S.needFit = true; renderAll(); }}, v)));
+  const search = el("input", {placeholder:"search nodes…", value:S.q, style:{width:"170px"}, oninput:e => { S.q = e.target.value; renderCanvas(); }});
+  const fs = el("select", {onchange:e => { S.fstatus = e.target.value; renderCanvas(); }}, el("option", {value:""}, "all statuses"),
+    ...S.meta.statuses.map(s => el("option", {value:s, selected:S.fstatus === s}, s)));
+  const tstat = el("select", {disabled:RO, onchange:e => mutate("PATCH", "", {status:e.target.value}), title:"tree status"},
+    ...S.meta.tree_statuses.map(s => el("option", {value:s, selected:S.tree.status === s}, s)));
+  tstat.style.width = "auto";
+  tb.append(el("span", {class:"title"}, S.tree.title), tstat, seg, search, fs);
+  if (S.view === "graph") tb.append(el("button", {onclick:fit}, "Fit"), el("button", {onclick:() => zoomBy(1.2)}, "+"), el("button", {onclick:() => zoomBy(1/1.2)}, "−"));
+  if (S.view !== "activity") tb.append(
+    el("button", {onclick:() => { S.collapsed.clear(); saveCollapsed(); S.needFit = true; renderCanvas(); }}, "Expand all"),
+    el("button", {onclick:() => { for (const n of Object.values(nodes())) if (n.id !== S.tree.root_id && kids(n.id).length) S.collapsed.add(n.id); saveCollapsed(); S.needFit = true; renderCanvas(); }}, "Collapse all"));
+  tb.append(el("span", {class:"legend"}, ...Object.keys(COLORS).map(t => el("span", {style:{"--c":COLORS[t]}}, t))));
+}
+
+// ------------------------------------------------------------ canvas
+function layout(){
+  const pos = {}; let slot = 0;
+  function walk(id, depth){
+    const ch = S.collapsed.has(id) ? [] : kids(id);
+    if (!ch.length){ pos[id] = {x: depth*(W+GX), y: slot*(H+GY)}; slot++; return; }
+    ch.forEach(c => walk(c.id, depth+1));
+    const ys = ch.map(c => pos[c.id].y);
+    pos[id] = {x: depth*(W+GX), y: (Math.min(...ys)+Math.max(...ys))/2};
+  }
+  if (S.tree.root_id) walk(S.tree.root_id, 0);
+  return pos;
+}
+function renderCanvas(){
+  const cv = $("#canvas"); cv.replaceChildren(); cv.className = "";
+  if (!S.tree){ cv.append(el("div", {class:"empty"}, RO ? "No trees in this snapshot." : "Pick a tree, or create one with “+ tree”.")); return; }
+  if (S.view === "activity") return renderActivity(cv);
+  if (S.view === "outline") return renderOutline(cv);
+  cv.className = "graph";
+  const pos = layout(), world = el("div", {id:"world"});
+  const xs = Object.values(pos), maxX = Math.max(...xs.map(p => p.x)) + W, maxY = Math.max(...xs.map(p => p.y)) + H;
+  const NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("width", maxX); svg.setAttribute("height", maxY);
+  const defs = document.createElementNS(NS, "defs");
+  defs.innerHTML = '<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#e07a5f"/></marker>';
+  svg.append(defs);
+  const path = (d, stroke, dash, w, marker) => { const p = document.createElementNS(NS, "path"); p.setAttribute("d", d); p.setAttribute("fill", "none");
+    p.setAttribute("stroke", stroke); p.setAttribute("stroke-width", w||1.6); if (dash) p.setAttribute("stroke-dasharray", dash); if (marker) p.setAttribute("marker-end", "url(#arr)"); svg.append(p); return p; };
+  for (const n of Object.values(nodes())){
+    if (!pos[n.id] || !n.parent || !pos[n.parent]) continue;
+    const a = pos[n.parent], b = pos[n.id], x1 = a.x+W, y1 = a.y+H/2, x2 = b.x, y2 = b.y+H/2, mx = (x1+x2)/2;
+    const chosen = n.status === "chosen", rej = n.status === "rejected";
+    path(`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`, chosen ? "#16a34a" : (rej ? "#d4d6dc" : "#b7bdcc"), rej ? "4 4" : null, chosen ? 2.6 : 1.6);
+  }
+  for (const n of Object.values(nodes())) for (const l of n.links){
+    const a = pos[n.id], b = pos[l.target]; if (!a || !b) continue;
+    const x1 = a.x+W/2, y1 = a.y+(b.y>a.y?H:0), x2 = b.x+W/2, y2 = b.y+(b.y>a.y?0:H), bend = 60;
+    path(`M${x1},${y1} C${x1+bend},${(y1+y2)/2} ${x2+bend},${(y1+y2)/2} ${x2},${y2}`, "#e07a5f", "5 4", 1.5, true);
+    const t = document.createElementNS(NS, "text"); t.setAttribute("x", (x1+x2)/2+bend*0.8); t.setAttribute("y", (y1+y2)/2);
+    t.setAttribute("font-size", "10"); t.setAttribute("fill", "#c2563b"); t.textContent = l.type; svg.append(t);
+  }
+  world.append(svg);
+  for (const n of Object.values(nodes())){
+    const p = pos[n.id]; if (!p) continue;
+    const ot = openThreads(n), nk = kids(n.id).length, hit = S.q && matches(n);
+    const card = el("div", {class:`card st-${n.status}` + (S.sel === n.id ? " sel" : "") + (!matches(n) ? " dim" : "") + (hit ? " hit" : ""),
+        style:{left:p.x+"px", top:p.y+"px", "--c":COLORS[n.type]}, onclick:e => { e.stopPropagation(); select(n.id); }},
+      el("div", {class:"top"}, typeLabel(n), n.assignee ? el("span", {class:"badge"}, "@"+n.assignee) : null, el("span", {class:"id"}, n.id)),
+      el("div", {class:"ttl", title:n.title}, (n.status === "chosen" ? "★ " : "") + n.title),
+      el("div", {class:"bot"}, pill(n.status),
+        n.comments.length ? el("span", {class:"cm" + (ot ? " open" : "")}, `${n.comments.length} comment${n.comments.length > 1 ? "s" : ""}` + (ot ? ` · ${ot} open` : "")) : null,
+        n.links.length ? el("span", {class:"cm"}, `${n.links.length} link${n.links.length > 1 ? "s" : ""}`) : null));
+    if (nk) card.append(el("button", {class:"toggle", title: S.collapsed.has(n.id) ? `expand (${nk})` : "collapse",
+      onclick:e => { e.stopPropagation(); S.collapsed.has(n.id) ? S.collapsed.delete(n.id) : S.collapsed.add(n.id); saveCollapsed(); renderCanvas(); }},
+      S.collapsed.has(n.id) ? "+" + descCount(n.id) : "−"));
+    world.append(card);
+  }
+  cv.append(world);
+  world._bounds = {w:maxX, h:maxY};
+  if (S.needFit){ S.needFit = false; requestAnimationFrame(fit); } else applyTransform();
+}
+function descCount(id){ let c = 0; const st = [id]; while (st.length){ const k = kids(st.pop()); c += k.length; st.push(...k.map(x => x.id)); } return c; }
+function applyTransform(){ const w = $("#world"); if (w) w.style.transform = `translate(${S.panX}px,${S.panY}px) scale(${S.zoom})`; }
+function fit(){
+  const w = $("#world"), cv = $("#canvas"); if (!w || !w._bounds) return;
+  const {w:bw, h:bh} = w._bounds, cw = cv.clientWidth, ch = cv.clientHeight;
+  S.zoom = Math.max(0.2, Math.min(1.15, Math.min((cw-60)/bw, (ch-60)/bh)));
+  S.panX = Math.max(30, (cw - bw*S.zoom)/2); S.panY = Math.max(30, (ch - bh*S.zoom)/2); applyTransform();
+}
+function zoomBy(f, cx, cy){
+  const cv = $("#canvas"); cx = cx ?? cv.clientWidth/2; cy = cy ?? cv.clientHeight/2;
+  const nz = Math.max(0.15, Math.min(2.5, S.zoom*f));
+  S.panX = cx - (cx - S.panX)*(nz/S.zoom); S.panY = cy - (cy - S.panY)*(nz/S.zoom); S.zoom = nz; applyTransform();
+}
+(function initPan(){
+  const cv = $("#canvas"); let drag = null;
+  cv.addEventListener("mousedown", e => { if (S.view !== "graph" || e.target.closest(".card")) return; drag = {x:e.clientX, y:e.clientY, px:S.panX, py:S.panY, moved:false}; cv.classList.add("dragging"); });
+  window.addEventListener("mousemove", e => { if (!drag) return; S.panX = drag.px + e.clientX - drag.x; S.panY = drag.py + e.clientY - drag.y; drag.moved = drag.moved || Math.abs(e.clientX-drag.x)+Math.abs(e.clientY-drag.y) > 3; applyTransform(); });
+  window.addEventListener("mouseup", () => { if (drag && !drag.moved && S.view === "graph" && S.sel) select(null); drag = null; cv.classList.remove("dragging"); });
+  cv.addEventListener("wheel", e => { if (S.view !== "graph") return; e.preventDefault(); const r = cv.getBoundingClientRect(); zoomBy(e.deltaY < 0 ? 1.1 : 1/1.1, e.clientX-r.left, e.clientY-r.top); }, {passive:false});
+})();
+function renderOutline(cv){
+  const box = el("div", {id:"outline"});
+  function walk(id){
+    const n = nodes()[id], nk = kids(id), col = S.collapsed.has(id), ot = openThreads(n);
+    const li = el("li", {}, el("div", {class:`orow st-${n.status}` + (S.sel === id ? " sel" : "") + (!matches(n) ? " dim" : ""), style:{"--c":COLORS[n.type]}, onclick:() => select(id)},
+      nk.length ? el("span", {style:{cursor:"pointer", width:"14px"}, onclick:e => { e.stopPropagation(); col ? S.collapsed.delete(id) : S.collapsed.add(id); saveCollapsed(); renderCanvas(); }}, col ? "▸" : "▾") : el("span", {style:{width:"14px"}}),
+      el("span", {class:"ty"}, typeLabel(n)), el("span", {class:"tt"}, (n.status === "chosen" ? "★ " : "") + n.title),
+      n.comments.length ? el("span", {class:"cm" + (ot ? " open" : "")}, `${n.comments.length} comment${n.comments.length > 1 ? "s" : ""}` + (ot ? ` · ${ot} open` : "")) : null,
+      pill(n.status), el("span", {class:"cm"}, n.id)));
+    if (nk.length && !col) li.append(el("ul", {}, ...nk.map(c => walk(c.id))));
+    return li;
+  }
+  box.append(el("ul", {}, walk(S.tree.root_id)));
+  cv.append(box);
+}
+function renderActivity(cv){
+  const box = el("div", {id:"activity"});
+  const acts = [...(S.tree.activity||[])].reverse();
+  if (!acts.length) box.append(el("div", {class:"empty"}, "No activity yet."));
+  for (const a of acts) box.append(el("div", {class:"act"}, el("span", {class:"when", title:fmt(a.at)}, ago(a.at)),
+    el("span", {}, el("span", {class:"badge " + (a.by && a.by.type)}, a.by ? a.by.name : "?"), " ", el("b", {}, a.action), " ",
+      a.node ? el("a", {href:"#", onclick:e => { e.preventDefault(); if (nodes()[a.node]){ S.view = "graph"; select(a.node); } }}, a.node) : null, " ", el("span", {class:"cm"}, a.detail||""))));
+  cv.append(box);
+}
+
+// ------------------------------------------------------------ details panel
+function renderDetails(){
+  const d = $("#details"); d.replaceChildren();
+  if (!S.tree){ d.append(el("div", {class:"empty"}, "Decision trees help agents and humans plan features by asking why / what / how / where at every step and weighing options.")); return; }
+  const n = S.sel && nodes()[S.sel];
+  if (!n) return renderOverview(d);
+  const markDirty = () => { S.dirty = true; save.disabled = false; revert.disabled = false; };
+  const f = {};
+  const field = (key, input) => { f[key] = input; input.addEventListener("input", markDirty); input.addEventListener("change", markDirty); if (RO) input.disabled = true; return input; };
+  const save = el("button", {class:"primary", disabled:true, onclick:() => mutate("PATCH", `/nodes/${n.id}`, {
+    title:f.title.value, type:f.type.value, kind:f.kind.value, status:f.status.value, assignee:f.assignee.value,
+    body:f.body.value, pros:f.pros.value, cons:f.cons.value, rationale:f.rationale.value})}, "Save");
+  const revert = el("button", {disabled:true, onclick:() => { S.dirty = false; renderDetails(); }}, "Revert");
+  const parent = n.parent && nodes()[n.parent];
+  d.append(
+    el("div", {class:"row tight", style:{gap:"6px"}}, el("span", {class:"pill", style:{background:COLORS[n.type], color:"#fff"}}, typeLabel(n)), el("span", {class:"cm"}, n.id),
+      el("span", {style:{flex:1}}), el("button", {class:"small", onclick:() => select(null)}, "✕")),
+    parent ? el("div", {class:"cm", style:{marginTop:"6px"}}, "under ", el("a", {href:"#", onclick:e => { e.preventDefault(); select(parent.id); }}, `${parent.id} · ${parent.title}`)) : null,
+    el("label", {}, "Title"), field("title", el("input", {value:n.title})),
+    el("div", {class:"row"},
+      el("div", {}, el("label", {}, "Status"), field("status", el("select", {}, ...S.meta.statuses.map(s => el("option", {value:s, selected:n.status === s}, s))))),
+      el("div", {}, el("label", {}, "Type"), field("type", el("select", {}, ...S.meta.node_types.map(s => el("option", {value:s, selected:n.type === s}, s))))),
+      el("div", {}, el("label", {}, "Kind"), field("kind", el("select", {}, el("option", {value:""}, "—"), ...S.meta.kinds.map(s => el("option", {value:s, selected:n.kind === s}, s)))))),
+    el("label", {}, "Details"), field("body", el("textarea", {rows:4, placeholder:"context, constraints, evidence…"}, n.body)),
+    el("div", {class:"row"},
+      el("div", {}, el("label", {}, "Pros (one per line)"), field("pros", el("textarea", {rows:3}, (n.pros||[]).join("\n")))),
+      el("div", {}, el("label", {}, "Cons (one per line)"), field("cons", el("textarea", {rows:3}, (n.cons||[]).join("\n"))))),
+    el("label", {}, "Rationale / answer"), field("rationale", el("textarea", {rows:2, placeholder:"why this was decided"}, n.rationale||"")),
+    el("label", {}, "Assignee"), field("assignee", el("input", {value:n.assignee||"", placeholder:"agent, a person's name…"})),
+    el("div", {class:"row tight edit-only", style:{marginTop:"10px", gap:"6px"}}, save, revert,
+      n.type === "option" && n.status !== "chosen" ? el("button", {onclick:() => {
+        const r = prompt("Why choose this option? (rationale)", f.rationale.value || ""); if (r !== null) mutate("POST", `/nodes/${n.id}/choose`, {rationale:r}); }}, "★ Choose option") : null,
+      n.status !== "needs-input" ? el("button", {title:"flag for human input", onclick:() => mutate("PATCH", `/nodes/${n.id}`, {status:"needs-input"})}, "Needs input") : null,
+      el("span", {style:{flex:1}}),
+      n.id !== S.tree.root_id ? el("button", {class:"danger", onclick:() => { if (confirm(`Delete ${n.id} and its ${descCount(n.id)} descendant(s)?`)) { S.sel = n.parent; mutate("DELETE", `/nodes/${n.id}`); } }}, "Delete") : null),
+    el("div", {class:"cm", style:{marginTop:"6px"}}, `created by ${n.created_by ? n.created_by.name + " (" + n.created_by.type + ")" : "?"} · ${fmt(n.created_at)} · updated ${ago(n.updated_at)}`));
+  if (n.status === "chosen" || n.chosen){
+    const ch = n.chosen && nodes()[n.chosen];
+    if (ch) d.append(el("div", {class:"wait", style:{marginTop:"10px", background:"#f0fdf4"}, onclick:() => select(ch.id)}, "★ Chosen: ", el("b", {}, ch.title), ch.rationale ? el("div", {class:"cm prewrap"}, ch.rationale) : null));
+  }
+  // children
+  const ch = kids(n.id);
+  d.append(el("h3", {}, `Children (${ch.length})`));
+  for (const c of ch) d.append(el("span", {class:"chip", style:{borderLeft:`4px solid ${COLORS[c.type]}`}, onclick:() => select(c.id)}, `${c.id} · ${c.title.slice(0, 40)}`, " ", pill(c.status)));
+  d.append(addChildForm(n));
+  // links
+  d.append(el("h3", {}, `Links (${n.links.length})`));
+  for (const l of n.links){ const t = nodes()[l.target];
+    d.append(el("span", {class:"chip", onclick:() => select(l.target)}, `${l.type} → ${l.target}${t ? " · " + t.title.slice(0, 30) : ""}`,
+      RO ? null : el("span", {class:"x", title:"remove", onclick:e => { e.stopPropagation(); mutate("DELETE", `/nodes/${n.id}/links`, {target:l.target, type:l.type}); }}, "✕"))); }
+  const incoming = Object.values(nodes()).flatMap(m => m.links.filter(l => l.target === n.id).map(l => ({m, l})));
+  for (const {m, l} of incoming) d.append(el("span", {class:"chip", onclick:() => select(m.id)}, `${m.id} ${l.type} this`));
+  if (!RO){
+    const tgt = el("select", {}, ...Object.values(nodes()).filter(m => m.id !== n.id).map(m => el("option", {value:m.id}, `${m.id} · ${m.title.slice(0, 40)}`)));
+    const lt = el("select", {}, ...S.meta.link_types.map(t => el("option", {value:t}, t)));
+    d.append(el("div", {class:"row", style:{marginTop:"6px"}}, lt, tgt, el("button", {style:{flex:"none"}, onclick:() => mutate("POST", `/nodes/${n.id}/links`, {target:tgt.value, type:lt.value})}, "Link")));
+  }
+  // comments
+  const th = threads(n);
+  d.append(el("h3", {}, `Discussion (${n.comments.length})`));
+  for (const t of th) d.append(renderThread(n, t));
+  if (!RO){
+    const ta = el("textarea", {rows:3, placeholder:"Ask a question, challenge an assumption, give direction…"});
+    d.append(ta, el("div", {class:"row tight", style:{marginTop:"6px"}}, el("button", {class:"primary", onclick:() => mutate("POST", `/nodes/${n.id}/comments`, {text:ta.value})}, "Comment")));
+  }
+  // history
+  if (n.history && n.history.length){
+    const det = el("details", {}, el("summary", {class:"cm", style:{cursor:"pointer"}}, `History (${n.history.length})`));
+    for (const h of [...n.history].reverse()) det.append(el("div", {class:"cm"}, `${ago(h.at)} · ${h.by ? h.by.name : "?"}: ${h.field} `, el("b", {}, String(Array.isArray(h.to) ? h.to.length + " items" : (h.to ?? "")).slice(0, 60))));
+    d.append(el("h3", {}, "History"), det);
+  }
+}
+function renderThread(n, t){
+  const root = t[0], box = el("div", {class:"thread" + (root.resolved ? " resolved" : "")});
+  for (const c of t) box.append(el("div", {class:"msg"},
+    el("div", {class:"meta"}, el("span", {class:"who"}, c.author), el("span", {class:"badge " + c.author_type}, c.author_type), el("span", {title:fmt(c.created_at)}, ago(c.created_at)), el("span", {style:{marginLeft:"auto"}}, c.id)),
+    el("div", {class:"prewrap"}, c.text)));
+  if (!RO){
+    const ta = el("textarea", {rows:2, placeholder:"Reply…", style:{marginTop:"6px", minHeight:"36px"}});
+    box.append(ta, el("div", {class:"row tight", style:{gap:"6px", marginTop:"5px"}},
+      el("button", {class:"small", onclick:() => mutate("POST", `/nodes/${n.id}/comments`, {text:ta.value, reply_to:root.id})}, "Reply"),
+      el("button", {class:"small", onclick:() => mutate("PATCH", `/nodes/${n.id}/comments/${root.id}`, {resolved:!root.resolved})}, root.resolved ? "Reopen" : "Resolve"),
+      root.resolved ? el("span", {class:"badge"}, "resolved") : null));
+  } else if (root.resolved) box.append(el("span", {class:"badge"}, "resolved"));
+  return box;
+}
+function addChildForm(n){
+  const wrap = el("div", {class:"edit-only", style:{marginTop:"8px"}});
+  const defaults = n.type === "question" ? ["option", "question", "note"] : ["question", "option", "decision", "task", "note"];
+  const form = el("div", {style:{display:"none", border:"1px solid var(--line)", borderRadius:"8px", padding:"8px", marginTop:"6px"}});
+  let type = "question";
+  const kind = el("select", {}, el("option", {value:""}, "kind —"), ...S.meta.kinds.map(k => el("option", {value:k}, k)));
+  const title = el("input", {placeholder:"title"}), body = el("textarea", {rows:2, placeholder:"details (optional)"});
+  const hdr = el("b", {});
+  form.append(hdr, el("div", {class:"row", style:{marginTop:"6px"}}, kind), el("div", {style:{marginTop:"6px"}}, title), el("div", {style:{marginTop:"6px"}}, body),
+    el("div", {class:"row tight", style:{gap:"6px", marginTop:"6px"}},
+      el("button", {class:"primary", onclick:async () => { if (await mutate("POST", "/nodes", {parent:n.id, type, kind:type === "question" ? kind.value : "", title:title.value, body:body.value})) {} }}, "Add"),
+      el("button", {onclick:() => form.style.display = "none"}, "Cancel")));
+  wrap.append(el("div", {class:"row tight", style:{gap:"5px", flexWrap:"wrap"}}, ...defaults.map(t => el("button", {class:"small", onclick:() => {
+    type = t; hdr.textContent = `New ${t} under ${n.id}`; kind.parentElement.style.display = t === "question" ? "" : "none"; form.style.display = "block"; title.focus(); }}, "+ " + t))), form);
+  return wrap;
+}
+function renderOverview(d){
+  const t = S.tree, sum = {};
+  for (const n of Object.values(t.nodes)) sum[n.status] = (sum[n.status]||0) + 1;
+  d.append(el("h2", {}, t.title), el("div", {class:"row tight", style:{gap:"6px"}}, pill(t.status), el("span", {class:"cm"}, `${Object.keys(t.nodes).length} nodes · rev ${t.revision} · updated ${ago(t.updated_at)}`)));
+  if (t.description) d.append(el("p", {class:"prewrap"}, t.description));
+  d.append(el("div", {}, ...Object.entries(sum).map(([s, c]) => el("span", {style:{marginRight:"6px"}}, pill(s), " ", c))));
+  const sec = (title, items, empty) => {
+    d.append(el("h3", {}, `${title} (${items.length})`));
+    if (!items.length) d.append(el("div", {class:"cm"}, empty));
+    for (const it of items){
+      const last = it.t && it.t[it.t.length-1];
+      d.append(el("div", {class:"wait", onclick:() => select(it.n.id)},
+        el("div", {}, el("b", {}, it.n.id), " · ", it.n.title, " ", it.kind === "needs-input" ? pill("needs-input") : null),
+        last ? el("div", {class:"cm prewrap"}, `${last.author}: ${last.text.slice(0, 160)}`) : null));
+    }
+  };
+  sec("Waiting on humans", waiting("human"), "Nothing needs a human right now.");
+  sec("Waiting on agents", waiting("agent"), "No unanswered human comments.");
+  const openQ = Object.values(t.nodes).filter(n => n.type === "question" && ["open", "exploring", "blocked"].includes(n.status));
+  sec("Open questions", openQ.map(n => ({n})), "All questions are resolved.");
+  d.append(el("p", {class:"cm", style:{marginTop:"18px"}}, "Click a node to see details, discuss, change status or add children. Drag to pan, scroll to zoom."));
+}
+
+function renderAll(){ setHash(); renderSidebar(); renderToolbar(); renderCanvas(); renderDetails(); }
+
+async function boot(){
+  S.meta = RO ? STATIC.meta : await api("GET", "/meta");
+  await refreshProjects();
+  const h = parseHash();
+  if (h) await openTree(h.pid, h.slug, h.sel);
+  else { const p = S.projects.find(p => p.trees.length); if (p) await openTree(p.id, p.trees[0].id); else renderAll(); }
+  if (!RO) setInterval(refreshProjects, 3000);
+}
+window.addEventListener("resize", () => { if (S.view === "graph") applyTransform(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !e.target.closest("input,textarea,select") && S.sel) select(null); });
+boot().catch(e => { document.body.append(el("pre", {style:{color:"red", padding:"10px"}}, String(e))); });
+</script>
+</body>
+</html>
