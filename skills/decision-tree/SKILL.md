@@ -11,7 +11,7 @@ Use this skill whenever you plan a feature, design change, or any non-trivial te
 
 - Each application has its own `<app-root>/.decisions/` folder (commit it with the app).
 - One JSON file per feature tree: `.decisions/<tree-slug>.json`.
-- `.decisions/_tool/` holds a vendored copy of the tool (`dtree.cjs` + `viewer.html`) so anyone can run it without this skill.
+- `.decisions/_tool/` holds a vendored copy of the tool (`dtree.cjs`, `viewer.html`, built-in `templates/`) so anyone can run it without this skill. `.decisions/templates/` holds the project's own tree templates.
 - Node types: `goal` (root, one per tree), `question`, `option`, `decision`, `task`, `note`. Question kinds: `why what how where who when risk other`.
 - Node statuses: `open exploring needs-input blocked decided chosen rejected deferred done`. Tree statuses: `draft active decided implemented archived`.
 - Every node has: `title`, `body`, `pros[]`, `cons[]`, `rationale`, `assignee`, `links[]` (graph edges: `depends-on blocks relates-to supersedes duplicates`), `comments[]` (threaded via `reply_to`, `resolved` flag, `author_type` = `agent` | `human`), `history[]`. Trees also keep an `activity` log and a `revision` counter.
@@ -32,8 +32,9 @@ Run from the app root (or pass `-C <app-root>`). Set `DTREE_AUTHOR=<your agent n
 ## Workflow (follow in order)
 
 1. **Set up**: `dt init` (creates `.decisions/`, vendors the tool; `--refresh-tool` updates the vendored copy). Then check existing trees: `dt list`. Reuse a tree if the feature already has one.
-2. **Create the tree**: `dt new "Add SSO login" -d "<problem, users, desired outcome, constraints>"` → prints the slug and root `g1`.
-3. **Question the goal first** — add at least one question of each core kind under the root before proposing solutions:
+2. **Create the tree, starting from a template when one fits**: run `dt templates` (alias `dt modes`) and pick the closest match — e.g. `dt new "Add SSO login" --template feature-planning -d "<problem, users, desired outcome, constraints>"` for a feature, or `dt new "Review PR 42" --template pr-review` for a pull-request review. Project templates in `.decisions/templates/` are the team's own conventions; prefer them. With no match, `dt new "<title>" -d "..."` creates a blank tree. Either way it prints the slug and root `g1`; run `dt show <tree> --body` to read the seeded questions and their guidance.
+   - A template is a starting point, not a checklist to fill in: answer its questions, delete or `deferred` the ones that don't apply, and **keep questioning beyond it** (steps 3-5) — every feature has questions no template anticipates.
+3. **Question the goal first** — make sure there is at least one question of each core kind under the root (add any the template lacks) before proposing solutions:
    - `why` — why build this, why now, what problem/evidence, what happens if we don't?
    - `what` — what exactly is in/out of scope, what does success look like, what data/APIs?
    - `how` — how will it work, build vs. buy, which approach/library/pattern?
@@ -59,11 +60,34 @@ Run from the app root (or pass `-C <app-root>`). Set `DTREE_AUTHOR=<your agent n
 9. **Show the tree to the human**: `dt show <tree> [--body]` prints an ASCII tree for chat. For the interactive viewer start `dt serve --port 8765` (binds 127.0.0.1; add `--scan ~/repos` to list every app's `.decisions`, or `--extra-project <path>`), keep it running in a background shell, and share it (in Devin, call `browser_preview` with that port). For a static, read-only snapshot to attach to a message or PR: `dt render -o decisions.html [--tree <slug>]`.
 10. **Close out**: when the plan is settled set `dt set-tree <tree> --status decided`; after shipping, mark tasks `done` and the tree `implemented`. Commit `.decisions/` with the code so future agents see why things were built this way.
 
+## Templates and custom modes
+
+Templates (also called modes) are YAML files that seed a new tree with questions, options, tasks and notes under the root goal. `dt new --template <name>` (or `--mode <name>`) looks up, first match wins: a file path (argument contains `/` or ends in `.yaml/.yml/.json`), the project's `.decisions/templates/<name>.yaml`, each dir in `$DTREE_TEMPLATES_PATH`, `~/.config/decision-tree/templates/` (`$XDG_CONFIG_HOME`), then the built-ins in this skill's `templates/` (`feature-planning`, `pr-review`). `dt templates` shows every template with its source and which one wins; `dt template show <name>` prints its outline.
+
+### Custom modes
+
+When the human (or you, after a few similar trees) wants a reusable starting structure, register it as a mode:
+
+```bash
+dt create-mode custom-planning --yaml ./custom-planning.yaml           # saves .decisions/templates/custom-planning.yaml
+dt create-mode custom-planning --yaml ./custom-planning.yaml --user    # or ~/.config/decision-tree/templates/
+dt new "Plan billing v2" --mode custom-planning
+dt remove-mode custom-planning [--user]                                # project/user modes only, never built-ins
+```
+
+`create-mode` validates the file (nothing is written on error), forces its `name:` to the mode name, and refuses to overwrite an existing mode without `--force`. To capture a real tree's structure as a template: `dt template export <tree> -o ./custom-planning.yaml` (keeps titles, types, kinds, bodies, pros/cons and nesting; drops statuses, comments and history), then `create-mode` it. `dt init --templates` writes a commented `.decisions/templates/example.yaml`.
+
+Format (`template: 1`): top-level `template`, `name` (= file name), `title`, optional `description`, `tree_status`, and a non-empty `nodes` list; each node has `title` and optional `type` (question default, option, decision, task, note — never goal), `kind` (questions only), `body`, `status`, `assignee`, `pros`/`cons` (options only) and `children`. Only a YAML subset is accepted: comments, mappings, `- ` lists, quoted/plain scalars, one-line `[a, b]` lists, `|`/`>` blocks; anchors, aliases, tags, flow mappings and tabs are rejected with `file:line` errors.
+
 ## Command reference
 
 ```
-dt init [--refresh-tool]                     dt list
-dt new "<title>" [--id slug] [-d desc]       dt show <tree> [--body]
+dt init [--refresh-tool] [--templates]       dt list
+dt new "<title>" [--id slug] [-d desc] [--template name|path | --mode name]
+dt templates | dt modes                      dt template show <name|path>
+dt template export <tree> -o <file.yaml|dir> [--name N]
+dt create-mode <name> --yaml <file> [--user] [--force]    dt remove-mode <name> [--user]
+dt show <tree> [--body]
 dt node <tree> <node>                        (details, threads, history)
 dt add <tree> -p <parent> [-t question|option|decision|task|note] [-k kind] --title T [-b body] [-s status] [--pro P]... [--con C]... [--assignee A]
 dt update <tree> <node> [--title] [-b] [-k] [-t] [-s] [--pro]... [--con]... [-r rationale] [--assignee] [--parent new-parent]
@@ -82,7 +106,7 @@ global: -C <app-root>  --author NAME  --as agent|human  --json
 
 ## Web viewer
 
-- Sidebar lists every project and its trees with badges (open questions, needs-input, items waiting on humans/agents). "+ tree" creates a tree.
+- Sidebar lists every project and its trees with badges (open questions, needs-input, items waiting on humans/agents). "+ tree" creates a tree, optionally from any available template.
 - Graph view (pan by dragging, scroll to zoom, collapse subtrees), outline view, and activity log. Chosen paths are green; rejected options are struck through; `depends-on` links are dashed arrows.
 - Clicking a node opens an editor (title, status, type, kind, details, pros/cons, rationale, assignee), "Choose option", "Needs input", add-child buttons, links, threaded comments with reply/resolve, and history. Comments from the browser are recorded as `human` with the name in the "You" box.
 - With no node selected, the right panel is a coordination dashboard: waiting on humans, waiting on agents, open questions.
@@ -90,4 +114,4 @@ global: -C <app-root>  --author NAME  --as agent|human  --json
 
 ## HTTP API (used by the viewer; agents should prefer the CLI)
 
-`GET /api/projects`, `GET /api/meta`, `POST /api/projects/<p>/trees`, `GET|PATCH /api/projects/<p>/trees/<slug>`, `POST .../nodes`, `PATCH|DELETE .../nodes/<id>`, `POST .../nodes/<id>/choose`, `POST .../nodes/<id>/comments`, `PATCH .../nodes/<id>/comments/<cid>`, `POST|DELETE .../nodes/<id>/links`. JSON bodies accept `author` and `author_type`. Requests whose `Origin` doesn't match the server, or whose `Host` isn't `localhost`, an IP address or the `--host` name, are rejected with 403.
+`GET /api/projects`, `GET /api/meta`, `GET /api/projects/<p>/templates`, `POST /api/projects/<p>/trees` (`title`, `description`, `id`, optional `template` name), `GET|PATCH /api/projects/<p>/trees/<slug>`, `POST .../nodes`, `PATCH|DELETE .../nodes/<id>`, `POST .../nodes/<id>/choose`, `POST .../nodes/<id>/comments`, `PATCH .../nodes/<id>/comments/<cid>`, `POST|DELETE .../nodes/<id>/links`. JSON bodies accept `author` and `author_type`. Requests whose `Origin` doesn't match the server, or whose `Host` isn't `localhost`, an IP address or the `--host` name, are rejected with 403.

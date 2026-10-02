@@ -10,6 +10,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const http = require("node:http");
+const os = require("node:os");
 const net = require("node:net");
 const { parseArgs } = require("node:util");
 
@@ -99,7 +100,7 @@ class Store {
     return isDir(this.dir);
   }
 
-  init(refreshTool = false) {
+  init(refreshTool = false, { templates = false } = {}) {
     fs.mkdirSync(this.dir, { recursive: true });
     const tool = path.join(this.dir, TOOL_DIR);
     const here = realOrResolved(__filename);
@@ -107,6 +108,15 @@ class Store {
       fs.mkdirSync(tool, { recursive: true });
       fs.copyFileSync(here, path.join(tool, SCRIPT_NAME));
       fs.copyFileSync(VIEWER_HTML, path.join(tool, "viewer.html"));
+      const builtins = builtinTemplatesDir();
+      fs.rmSync(path.join(tool, TEMPLATES_DIR), { recursive: true, force: true });
+      if (isDir(builtins)) fs.cpSync(builtins, path.join(tool, TEMPLATES_DIR), { recursive: true });
+    }
+    if (templates) {
+      const dir = path.join(this.dir, TEMPLATES_DIR);
+      fs.mkdirSync(dir, { recursive: true });
+      const example = path.join(dir, "example.yaml");
+      if (!fs.existsSync(example)) fs.writeFileSync(example, EXAMPLE_TEMPLATE);
     }
     const readme = path.join(this.dir, "README.md");
     if (!fs.existsSync(readme)) {
@@ -195,7 +205,8 @@ class Store {
     });
   }
 
-  createTree(slug, title, description, author) {
+  /** Creates a tree; `template` (from resolveTemplate) seeds its nodes in the same locked write. */
+  createTree(slug, title, description, author, template = null) {
     this.init();
     return this.withLock(() => {
       if (fs.existsSync(this.treePath(slug))) throw new DTError(`tree ${JSON.stringify(slug)} already exists`);
@@ -215,8 +226,10 @@ class Store {
         nodes: {},
         activity: [],
       };
+      if (template) tree.template = template.name;
       const root = addNode(tree, { parent: null, type: "goal", title, body: description, author });
       tree.root_id = root.id;
+      if (template) applyTemplate(tree, template, author);
       this.write(tree);
       return tree;
     });
@@ -555,6 +568,7 @@ function summarize(tree) {
     id: tree.id,
     title: tree.title ?? tree.id,
     status: tree.status ?? "draft",
+    template: tree.template ?? null,
     revision: tree.revision ?? 0,
     updated_at: tree.updated_at ?? null,
     node_count: nodes.length,
@@ -612,6 +626,793 @@ function renderStaticHtml(payload) {
   return html.replace("<!--DTREE_STATIC-->", () => `<script>window.DTREE_STATIC = ${data};</script>`);
 }
 
+// --------------------------------------------------------------------------- YAML subset
+
+const isPlainObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const SEQ_ITEM_RE = /^-(\s|$)/;
+
+function stripComment(s) {
+  for (let k = 0; k < s.length; k++) {
+    if (s[k] === "#" && (k === 0 || /\s/.test(s[k - 1]))) return s.slice(0, k).trimEnd();
+  }
+  return s.trimEnd();
+}
+
+/** Index of the closing quote of the quoted string starting at `start`, or -1. */
+function quotedEnd(s, start = 0) {
+  const q = s[start];
+  for (let k = start + 1; k < s.length; k++) {
+    if (q === '"' && s[k] === "\\") k++;
+    else if (q === "'" && s[k] === "'" && s[k + 1] === "'") k++;
+    else if (s[k] === q) return k;
+  }
+  return -1;
+}
+
+function plainScalar(s) {
+  if (/^(~|null|Null|NULL)$/.test(s)) return null;
+  if (/^(true|True|TRUE)$/.test(s)) return true;
+  if (/^(false|False|FALSE)$/.test(s)) return false;
+  if (/^[-+]?\d+$/.test(s) && Number.isSafeInteger(Number(s))) return Number(s);
+  return s;
+}
+
+const YAML_ESCAPES = { n: "\n", t: "\t", r: "\r", b: "\b", f: "\f", '"': '"', "\\": "\\", "/": "/", " ": " ", 0: "\0" };
+
+/**
+ * Parser for the YAML subset used by templates: comments, block mappings and sequences,
+ * plain/quoted scalars, single-line flow sequences of scalars, `[]`/`{}`, and `|`/`>` blocks.
+ * Anything else raises a DTError with `file:line`.
+ */
+class YamlParser {
+  constructor(text, file) {
+    this.file = file || "<yaml>";
+    this.lines = String(text).replace(/^\uFEFF/, "").split(/\r\n|\r|\n/);
+    if (this.lines.length > 1 && this.lines[this.lines.length - 1] === "") this.lines.pop();
+    this.i = 0;
+    this.started = false;
+  }
+
+  fail(msg) {
+    throw new DTError(`${this.file}:${Math.min(this.i, this.lines.length - 1) + 1}: ${msg}`);
+  }
+
+  /** Next significant line as {indent, text}, skipping blanks and comments; null at EOF. */
+  peek() {
+    while (this.i < this.lines.length) {
+      const m = /^([ \t]*)(.*)$/.exec(this.lines[this.i]);
+      const text = m[2].trimEnd();
+      if (!text || text.startsWith("#")) {
+        this.i++;
+        continue;
+      }
+      if (m[1].includes("\t")) this.fail("tabs are not allowed for indentation; use spaces");
+      const indent = m[1].length;
+      if (indent === 0 && /^---(\s|$)/.test(text)) {
+        if (this.started) this.fail("multiple documents ('---') are not supported");
+        if (stripComment(text.slice(3)).trim()) this.fail("content after '---' is not supported");
+        this.started = true;
+        this.i++;
+        continue;
+      }
+      if (indent === 0 && /^\.\.\.(\s|$)/.test(text)) this.fail("document end marker ('...') is not supported");
+      if (indent === 0 && text.startsWith("%")) this.fail("YAML directives ('%') are not supported");
+      this.started = true;
+      return { indent, text };
+    }
+    return null;
+  }
+
+  parse() {
+    if (!this.peek()) return null;
+    const value = this.node();
+    if (this.peek()) this.fail("unexpected content (check the indentation)");
+    return value;
+  }
+
+  node() {
+    const ln = this.peek();
+    if (SEQ_ITEM_RE.test(ln.text)) return this.seq(ln.indent);
+    if (this.splitKey(ln.text)) return this.map(ln.indent);
+    return this.value(ln.text, ln.indent - 1, false);
+  }
+
+  /** `key: rest` → {key, rest}; null if the line is not a mapping entry. */
+  splitKey(text) {
+    if (text === "?" || text.startsWith("? ")) this.fail("complex keys ('? ') are not supported");
+    if (text[0] === '"' || text[0] === "'") {
+      const end = quotedEnd(text);
+      if (end < 0) return null;
+      const m = /^\s*:(\s|$)/.exec(text.slice(end + 1));
+      if (!m) return null;
+      return { key: this.quoted(text.slice(0, end + 1)), rest: text.slice(end + 1 + m[0].length).trim() };
+    }
+    if (/^[[\]{}&*!|>%@`,#]/.test(text)) return null;
+    const m = /:(\s|$)/.exec(text);
+    if (!m) return null;
+    const key = text.slice(0, m.index).trimEnd();
+    if (/\s#/.test(key)) return null;
+    return { key, rest: text.slice(m.index + 1).trim() };
+  }
+
+  map(indent) {
+    const out = {};
+    for (;;) {
+      const ln = this.peek();
+      if (!ln || ln.indent < indent) break;
+      if (ln.indent > indent) this.fail("unexpected indentation (multi-line plain scalars are not supported; use | or quotes)");
+      if (SEQ_ITEM_RE.test(ln.text)) this.fail("unexpected list item inside a mapping (check the indentation)");
+      const kv = this.splitKey(ln.text);
+      if (!kv) this.fail("expected a 'key: value' mapping entry");
+      if (hasOwn(out, kv.key)) this.fail(`duplicate key ${JSON.stringify(kv.key)}`);
+      const value = this.value(kv.rest, indent, true);
+      Object.defineProperty(out, kv.key, { value, enumerable: true, writable: true, configurable: true });
+    }
+    return out;
+  }
+
+  seq(indent) {
+    const out = [];
+    for (;;) {
+      const ln = this.peek();
+      if (!ln || ln.indent < indent) break;
+      if (ln.indent > indent) this.fail("unexpected indentation (check the list item alignment)");
+      if (!SEQ_ITEM_RE.test(ln.text)) break;
+      const after = ln.text.slice(1);
+      if (/^ *\t/.test(after)) this.fail("tabs are not allowed for indentation; use spaces");
+      const rest = after.trimStart();
+      if (rest && !rest.startsWith("#") && (SEQ_ITEM_RE.test(rest) || this.splitKey(rest))) {
+        const col = indent + 1 + (after.length - rest.length);
+        this.lines[this.i] = " ".repeat(col) + rest;
+        out.push(this.node());
+      } else {
+        out.push(this.value(rest, indent, false));
+      }
+    }
+    return out;
+  }
+
+  /** Value after `key:` or `- ` on the current line; nested blocks must be indented past `parentIndent`. */
+  value(rest, parentIndent, inMap) {
+    if (!rest || rest.startsWith("#")) {
+      this.i++;
+      const next = this.peek();
+      if (next && (next.indent > parentIndent || (inMap && next.indent === parentIndent && SEQ_ITEM_RE.test(next.text)))) {
+        return this.node();
+      }
+      return null;
+    }
+    if (rest[0] === "|" || rest[0] === ">") return this.block(rest, parentIndent);
+    const v = this.scalar(rest);
+    this.i++;
+    return v;
+  }
+
+  checkTail(tail) {
+    if (tail.trim() && !/^\s+#/.test(tail)) this.fail(`unexpected text after value: ${JSON.stringify(tail.trim())}`);
+  }
+
+  quoted(s) {
+    const inner = s.slice(1, -1);
+    if (s[0] === "'") return inner.replace(/''/g, "'");
+    return inner.replace(/\\(u[0-9a-fA-F]{4}|.)/g, (_, ch) => {
+      if (ch.length === 5) return String.fromCharCode(parseInt(ch.slice(1), 16));
+      if (!hasOwn(YAML_ESCAPES, ch)) this.fail(`unsupported escape '\\${ch}' in double-quoted string`);
+      return YAML_ESCAPES[ch];
+    });
+  }
+
+  rejectSpecial(c) {
+    if (c === "&") this.fail("anchors ('&') are not supported");
+    if (c === "*") this.fail("aliases ('*') are not supported");
+    if (c === "!") this.fail("tags ('!') are not supported");
+    if (c === "@" || c === "`") this.fail(`a plain value cannot start with '${c}'; quote it`);
+  }
+
+  scalar(text) {
+    const c = text[0];
+    this.rejectSpecial(c);
+    if (c === '"' || c === "'") {
+      const end = quotedEnd(text);
+      if (end < 0) this.fail("unterminated quoted string (multi-line quoted strings are not supported; use |)");
+      this.checkTail(text.slice(end + 1));
+      return this.quoted(text.slice(0, end + 1));
+    }
+    if (c === "[") return this.flowSeq(text);
+    if (c === "{") {
+      const m = /^\{\s*\}(.*)$/.exec(text);
+      if (!m) this.fail("flow mappings ('{...}') are not supported; use a block mapping");
+      this.checkTail(m[1]);
+      return {};
+    }
+    const v = stripComment(text);
+    if (/:(\s|$)/.test(v)) this.fail("unexpected ': ' in a plain value; quote the string");
+    return plainScalar(v);
+  }
+
+  flowSeq(text) {
+    const items = [];
+    let k = 1;
+    const ws = () => {
+      while (k < text.length && /\s/.test(text[k])) k++;
+    };
+    ws();
+    if (text[k] === "]") k++;
+    else {
+      for (;;) {
+        ws();
+        const c = text[k];
+        if (c === undefined) this.fail("unterminated flow sequence (it must close with ']' on the same line)");
+        this.rejectSpecial(c);
+        if (c === "[" || c === "{") this.fail("nested flow collections are not supported");
+        if (c === "," || c === "]") this.fail("empty item in flow sequence");
+        if (c === '"' || c === "'") {
+          const end = quotedEnd(text, k);
+          if (end < 0) this.fail("unterminated quoted string in flow sequence");
+          items.push(this.quoted(text.slice(k, end + 1)));
+          k = end + 1;
+        } else {
+          let e = k;
+          while (e < text.length && text[e] !== "," && text[e] !== "]" && !(text[e] === "#" && /\s/.test(text[e - 1]))) e++;
+          const raw = text.slice(k, e).trim();
+          if (/:(\s|$)/.test(raw)) this.fail("mappings inside flow sequences are not supported");
+          items.push(plainScalar(raw));
+          k = e;
+        }
+        ws();
+        if (text[k] === ",") {
+          k++;
+          ws();
+          if (text[k] === "]") {
+            k++;
+            break;
+          }
+          continue;
+        }
+        if (text[k] === "]") {
+          k++;
+          break;
+        }
+        this.fail("expected ',' or ']' in flow sequence (it must close on the same line)");
+      }
+    }
+    this.checkTail(text.slice(k));
+    return items;
+  }
+
+  block(header, parentIndent) {
+    const m = /^([|>])([+-]?)(\s+#.*)?$/.exec(header);
+    if (!m) this.fail(`unsupported block scalar header ${JSON.stringify(header)} (use |, |-, |+, >, >- or >+)`);
+    this.i++;
+    let ind = null;
+    const body = [];
+    while (this.i < this.lines.length) {
+      const raw = this.lines[this.i];
+      if (raw.trim()) {
+        const lead = raw.length - raw.replace(/^ +/, "").length;
+        if (ind === null) {
+          if (lead <= parentIndent) break;
+          if (raw[lead] === "\t") this.fail("tabs are not allowed for indentation; use spaces");
+          ind = lead;
+        } else if (lead < ind) break;
+      }
+      body.push(raw);
+      this.i++;
+    }
+    if (ind === null) return m[2] === "+" ? "\n".repeat(body.length) : "";
+    const lines = body.map((l) => (l.length > ind ? l.slice(ind) : ""));
+    let n = lines.length;
+    while (n && !lines[n - 1].trim()) n--;
+    const content = lines.slice(0, n);
+    const text = m[1] === "|" ? content.join("\n") : foldLines(content);
+    if (m[2] === "-") return text;
+    if (m[2] === "+") return text + "\n".repeat(lines.length - n + 1);
+    return text + "\n";
+  }
+}
+
+function foldLines(lines) {
+  let out = "";
+  let prev = null;
+  let blanks = 0;
+  for (const l of lines) {
+    if (!l.trim()) {
+      blanks++;
+      out += "\n";
+      continue;
+    }
+    if (prev === null) out += l;
+    else {
+      const more = /^\s/.test(l) || /^\s/.test(prev);
+      out += blanks ? (more ? "\n" : "") + l : (more ? "\n" : " ") + l;
+    }
+    prev = l;
+    blanks = 0;
+  }
+  return out;
+}
+
+function parseYaml(text, file) {
+  return new YamlParser(text, file).parse();
+}
+
+const hasControlChars = (s, allowNewline = false) =>
+  [...s].some((ch) => {
+    const c = ch.charCodeAt(0);
+    return (c < 0x20 || c === 0x7f) && !(allowNewline && ch === "\n");
+  });
+
+function yamlNeedsQuotes(s, flow) {
+  return (
+    s === "" ||
+    s !== s.trim() ||
+    hasControlChars(s) ||
+    /^[-?:,[\]{}#&*!|>'"%@`]/.test(s) ||
+    /:(\s|$)|\s#/.test(s) ||
+    (flow && /[,[\]{}]/.test(s)) ||
+    plainScalar(s) !== s
+  );
+}
+
+function yamlScalar(v, flow = false) {
+  if (v === null || v === undefined) return "null";
+  if (typeof v === "boolean" || typeof v === "number") return String(v);
+  const s = String(v);
+  return yamlNeedsQuotes(s, flow) ? JSON.stringify(s) : s;
+}
+
+function yamlBlockable(s) {
+  if (!s.includes("\n") || hasControlChars(s, true)) return false;
+  const lines = s.replace(/\n+$/, "").split("\n");
+  const first = lines.find((l) => l !== "");
+  return first !== undefined && !/^\s/.test(first) && !lines.some((l) => l !== "" && !l.trim());
+}
+
+function yamlEntry(prefix, v, pad) {
+  if (Array.isArray(v)) {
+    if (!v.length) return [`${prefix} []`];
+    if (v.every((x) => !isPlainObject(x) && !Array.isArray(x))) {
+      const flow = `${prefix} [${v.map((x) => yamlScalar(x, true)).join(", ")}]`;
+      if (flow.length <= 100) return [flow];
+    }
+  }
+  if (isPlainObject(v) && !Object.keys(v).length) return [`${prefix} {}`];
+  if (Array.isArray(v) || isPlainObject(v)) {
+    const sub = yamlLines(v, pad);
+    if (prefix.endsWith("-")) return [`${prefix} ${sub[0].slice(pad.length)}`, ...sub.slice(1)];
+    return [prefix, ...sub];
+  }
+  if (typeof v === "string" && yamlBlockable(v)) {
+    const trailing = /\n*$/.exec(v)[0].length;
+    const chomp = trailing === 0 ? "-" : trailing === 1 ? "" : "+";
+    const lines = v.replace(/\n+$/, "").split("\n");
+    for (let k = 1; k < trailing; k++) lines.push("");
+    return [`${prefix} |${chomp}`, ...lines.map((l) => (l ? pad + l : ""))];
+  }
+  return [`${prefix} ${yamlScalar(v)}`];
+}
+
+function yamlLines(v, pad) {
+  if (Array.isArray(v)) return v.flatMap((item) => yamlEntry(`${pad}-`, item, `${pad}  `));
+  return Object.entries(v).flatMap(([k, item]) => {
+    const key = /^[A-Za-z_][\w.-]*$/.test(k) && plainScalar(k) === k ? k : JSON.stringify(k);
+    return yamlEntry(`${pad}${key}:`, item, `${pad}  `);
+  });
+}
+
+/** Emits block-style YAML that `parseYaml` reads back to an equal value. */
+function stringifyYaml(value) {
+  if (!Array.isArray(value) && !isPlainObject(value)) return yamlScalar(value) + "\n";
+  return yamlEntry("", value, "")
+    .map((l, k) => (k === 0 ? l.trimStart() : l))
+    .filter((l, k) => !(k === 0 && l === ""))
+    .join("\n") + "\n";
+}
+
+// --------------------------------------------------------------------------- templates
+
+const TEMPLATE_VERSION = 1;
+const TEMPLATE_NAME_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
+const TEMPLATE_EXTS = [".yaml", ".yml", ".json"];
+const TEMPLATES_DIR = "templates";
+const TEMPLATE_KEYS = ["template", "name", "title", "description", "tree_status", "nodes"];
+const TEMPLATE_NODE_KEYS = ["title", "type", "kind", "body", "status", "assignee", "pros", "cons", "children"];
+const TEMPLATE_PATH_RE = /[\\/]|\.(ya?ml|json)$/i;
+
+const isFile = (p) => {
+  try {
+    return fs.statSync(p).isFile();
+  } catch {
+    return false;
+  }
+};
+
+const templateNameOf = (file) => path.basename(file).replace(/\.(ya?ml|json)$/i, "");
+
+/** Validates parsed template data and returns it normalized (defaults filled in). */
+function validateTemplate(data, { label, name = null }) {
+  const fail = (where, msg) => {
+    throw new DTError(`template ${label}: ${where ? `${where}: ` : ""}${msg}`);
+  };
+  const text = (v, where, key) => {
+    if (v === undefined || v === null) return "";
+    if (typeof v === "string") return v;
+    if (typeof v === "number" || typeof v === "boolean") return String(v);
+    return fail(where, `${JSON.stringify(key)} must be a string`);
+  };
+  if (!isPlainObject(data)) fail("", "must be a mapping with template, name, title and nodes");
+  for (const k of Object.keys(data)) {
+    if (!TEMPLATE_KEYS.includes(k)) fail("", `unknown key ${JSON.stringify(k)} (allowed: ${TEMPLATE_KEYS.join(", ")})`);
+  }
+  if (data.template === undefined) fail("", `missing required key "template" (format version, use ${TEMPLATE_VERSION})`);
+  if (data.template !== TEMPLATE_VERSION) {
+    fail("template", `unsupported format version ${JSON.stringify(data.template)}; expected ${TEMPLATE_VERSION}`);
+  }
+  if (data.name === undefined || data.name === null) fail("", 'missing required key "name"');
+  if (typeof data.name !== "string" || !TEMPLATE_NAME_RE.test(data.name)) {
+    fail("name", `invalid name ${JSON.stringify(data.name)}: use lowercase letters, digits, '-' and '_'`);
+  }
+  if (name !== null && data.name !== name) fail("name", `${JSON.stringify(data.name)} must match the file name ${JSON.stringify(name)}`);
+  const title = text(data.title, "title", "title").trim();
+  if (!title) fail("", 'missing required key "title"');
+  const treeStatus = data.tree_status ?? null;
+  if (treeStatus !== null && !TREE_STATUSES.includes(treeStatus)) {
+    fail("tree_status", `invalid tree status ${JSON.stringify(treeStatus)}; expected one of: ${TREE_STATUSES.join(", ")}`);
+  }
+  const list = (v, where) => {
+    if (v === undefined || v === null) return [];
+    if (!Array.isArray(v)) fail(where, "must be a list");
+    return v;
+  };
+  const strings = (v, where, key) => {
+    const items = typeof v === "string" ? [v] : list(v, where ? `${where}.${key}` : key);
+    return items.map((x, k) => text(x, `${where}.${key}[${k}]`, key).trim()).filter(Boolean);
+  };
+  const node = (raw, where) => {
+    if (!isPlainObject(raw)) fail(where, "must be a mapping with at least a title");
+    for (const k of Object.keys(raw)) {
+      if (!TEMPLATE_NODE_KEYS.includes(k)) fail(where, `unknown key ${JSON.stringify(k)} (allowed: ${TEMPLATE_NODE_KEYS.join(", ")})`);
+    }
+    const nodeTitle = text(raw.title, where, "title").trim();
+    if (!nodeTitle) fail(where, 'missing required "title"');
+    const type = raw.type ?? "question";
+    if (type === "goal") fail(where, 'type "goal" is reserved for the root; use question, option, decision, task or note');
+    if (!Object.keys(NODE_TYPES).includes(type)) {
+      fail(where, `invalid type ${JSON.stringify(type)}; expected one of: question, option, decision, task, note`);
+    }
+    const kind = raw.kind ?? null;
+    if (kind !== null) {
+      if (type !== "question") fail(where, `"kind" is only allowed on questions (this node is a ${type})`);
+      if (!KINDS.includes(kind)) fail(where, `invalid kind ${JSON.stringify(kind)}; expected one of: ${KINDS.join(", ")}`);
+    }
+    const status = raw.status ?? "open";
+    if (!STATUSES.includes(status)) fail(where, `invalid status ${JSON.stringify(status)}; expected one of: ${STATUSES.join(", ")}`);
+    for (const key of ["pros", "cons"]) {
+      if (raw[key] !== undefined && raw[key] !== null && type !== "option") {
+        fail(where, `${JSON.stringify(key)} is only allowed on options (this node is a ${type})`);
+      }
+    }
+    return {
+      title: nodeTitle,
+      type,
+      kind,
+      body: text(raw.body, where, "body").replace(/\n+$/, ""),
+      status,
+      assignee: text(raw.assignee, where, "assignee").trim(),
+      pros: strings(raw.pros, where, "pros"),
+      cons: strings(raw.cons, where, "cons"),
+      children: list(raw.children, `${where}.children`).map((c, k) => node(c, `${where}.children[${k}]`)),
+    };
+  };
+  const nodes = list(data.nodes, "nodes");
+  if (!nodes.length) fail("nodes", "must be a non-empty list of nodes to add under the root goal");
+  return {
+    template: TEMPLATE_VERSION,
+    name: data.name,
+    title,
+    description: text(data.description, "description", "description").replace(/\n+$/, ""),
+    tree_status: treeStatus,
+    nodes: nodes.map((n, k) => node(n, `nodes[${k}]`)),
+  };
+}
+
+function readTemplateFile(file) {
+  let text;
+  try {
+    text = fs.readFileSync(file, "utf8");
+  } catch (e) {
+    throw new DTError(`cannot read template ${file}: ${e.code || e.message}`);
+  }
+  if (path.extname(file).toLowerCase() === ".json") {
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      throw new DTError(`${file}: invalid JSON: ${e.message}`);
+    }
+  }
+  return parseYaml(text, file);
+}
+
+function loadTemplate(file, source = "path") {
+  const name = templateNameOf(file);
+  const tpl = validateTemplate(readTemplateFile(file), { label: `${JSON.stringify(name)} (${file})`, name });
+  return { ...tpl, source, path: file };
+}
+
+function builtinTemplatesDir() {
+  const here = path.dirname(realOrResolved(__filename));
+  return path.basename(here) === TOOL_DIR ? path.join(here, TEMPLATES_DIR) : path.join(here, "..", TEMPLATES_DIR);
+}
+
+function userTemplatesDir() {
+  return path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config"), "decision-tree", TEMPLATES_DIR);
+}
+
+/** Template directories in lookup order: project, $DTREE_TEMPLATES_PATH, user config, built-in. */
+function templateDirs(store) {
+  const dirs = [{ source: "project", dir: path.join(store.dir, TEMPLATES_DIR) }];
+  for (const d of (process.env.DTREE_TEMPLATES_PATH || "").split(path.delimiter).filter(Boolean)) {
+    dirs.push({ source: "user", dir: path.resolve(d) });
+  }
+  dirs.push({ source: "user", dir: userTemplatesDir() }, { source: "builtin", dir: builtinTemplatesDir() });
+  const seen = new Set();
+  return dirs.filter(({ dir }) => {
+    const key = realOrResolved(dir);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+const templateFiles = (dir, name) => TEMPLATE_EXTS.map((ext) => path.join(dir, name + ext)).filter(isFile);
+
+function validateTemplateName(name) {
+  if (typeof name !== "string" || !TEMPLATE_NAME_RE.test(name)) {
+    throw new DTError(`invalid template name ${JSON.stringify(name)}: use lowercase letters, digits, '-' and '_'`);
+  }
+  return name;
+}
+
+/** Finds a template by file path or name (project > user > built-in). */
+function resolveTemplate(store, arg, { allowPath = true } = {}) {
+  if (TEMPLATE_PATH_RE.test(arg)) {
+    if (!allowPath) throw new DTError(`template must be a name, not a path: ${JSON.stringify(arg)}`);
+    const file = path.resolve(arg);
+    if (!isFile(file)) throw new DTError(`template file ${arg} not found`);
+    return loadTemplate(file, "path");
+  }
+  validateTemplateName(arg);
+  const dirs = templateDirs(store);
+  for (const { source, dir } of dirs) {
+    const [file] = templateFiles(dir, arg);
+    if (file) return loadTemplate(file, source);
+  }
+  throw new DTError(`template ${JSON.stringify(arg)} not found; run \`dtree templates\` to list them ` +
+    `(searched ${dirs.map((d) => d.dir).join(", ")})`);
+}
+
+/** Every template found, in precedence order; `active` is false when an earlier directory shadows it. */
+function listTemplates(store) {
+  const rows = [];
+  const winners = new Map();
+  for (const { source, dir } of templateDirs(store)) {
+    let files;
+    try {
+      files = fs.readdirSync(dir);
+    } catch {
+      continue;
+    }
+    const names = [...new Set(files.filter((f) => TEMPLATE_PATH_RE.test(f)).map(templateNameOf))]
+      .filter((n) => TEMPLATE_NAME_RE.test(n))
+      .sort();
+    for (const name of names) {
+      const [file] = templateFiles(dir, name);
+      if (!file) continue;
+      const row = { name, title: name, description: "", source, path: file, active: !winners.has(name), shadowed_by: null };
+      if (!row.active) row.shadowed_by = winners.get(name);
+      else winners.set(name, { source, path: file });
+      try {
+        const tpl = loadTemplate(file, source);
+        row.title = tpl.title;
+        row.description = tpl.description;
+        row.nodes = countTemplateNodes(tpl.nodes);
+      } catch (e) {
+        if (!(e instanceof DTError)) throw e;
+        row.error = e.message;
+      }
+      rows.push(row);
+    }
+  }
+  return rows.sort((a, b) => a.name.localeCompare(b.name) || Number(b.active) - Number(a.active));
+}
+
+const countTemplateNodes = (nodes) => nodes.reduce((acc, n) => acc + 1 + countTemplateNodes(n.children), 0);
+
+/** Adds a validated template's nodes under the root goal, preserving order and nesting. */
+function applyTemplate(tree, tpl, author) {
+  const walk = (list, parent) => {
+    for (const n of list) {
+      const node = addNode(tree, {
+        parent,
+        type: n.type,
+        title: n.title,
+        body: n.body,
+        kind: n.kind,
+        status: n.status,
+        author,
+        pros: n.pros,
+        cons: n.cons,
+        assignee: n.assignee,
+      });
+      walk(n.children, node.id);
+    }
+  };
+  walk(tpl.nodes, tree.root_id);
+  if (tpl.tree_status) tree.status = tpl.tree_status;
+  log(tree, author, "template", tree.root_id, `${tpl.name} (${tpl.source || "path"}): ${countTemplateNodes(tpl.nodes)} node(s)`);
+}
+
+/** A tree's structure (non-root nodes, without statuses, comments or history) as template data. */
+function treeToTemplate(tree, name) {
+  validateTemplateName(name);
+  const conv = (n) => {
+    const type = n.type === "goal" ? "note" : n.type;
+    const out = { title: n.title };
+    if (type !== "question") out.type = type;
+    if (type === "question" && n.kind) out.kind = n.kind;
+    if (n.body) out.body = n.body;
+    if (type === "option" && n.pros && n.pros.length) out.pros = [...n.pros];
+    if (type === "option" && n.cons && n.cons.length) out.cons = [...n.cons];
+    const kids = children(tree, n.id).map(conv);
+    if (kids.length) out.children = kids;
+    return out;
+  };
+  const nodes = children(tree, tree.root_id).map(conv);
+  if (!nodes.length) throw new DTError(`tree ${JSON.stringify(tree.id)} has no nodes under the root goal to export`);
+  const tpl = { template: TEMPLATE_VERSION, name, title: tree.title || name };
+  if (tree.description) tpl.description = tree.description;
+  tpl.nodes = nodes;
+  return tpl;
+}
+
+function renderTemplate(tpl) {
+  const lines = [`# ${tpl.title}  [${tpl.name}] (${tpl.source || "path"}: ${tpl.path || "-"})`];
+  if (tpl.tree_status) lines.push(`tree status: ${tpl.tree_status}`);
+  for (const l of tpl.description.replace(/\n+$/, "").split("\n")) if (tpl.description) lines.push(`  ${l}`);
+  const walk = (list, depth) => {
+    for (const n of list) {
+      const pad = "  ".repeat(depth);
+      const kind = n.kind ? `${n.kind.toUpperCase()}: ` : "";
+      const extra = [n.status !== "open" ? n.status : "", n.assignee ? `@${n.assignee}` : ""].filter(Boolean).join(", ");
+      lines.push(`${pad}- ${n.type} ${kind}${n.title}${extra ? `  (${extra})` : ""}`);
+      for (const l of n.body.replace(/\n+$/, "").split("\n")) if (n.body) lines.push(`${pad}    │ ${l}`);
+      if (n.pros.length) lines.push(`${pad}    pros: ${n.pros.join("; ")}`);
+      if (n.cons.length) lines.push(`${pad}    cons: ${n.cons.join("; ")}`);
+      walk(n.children, depth + 1);
+    }
+  };
+  walk(tpl.nodes, 0);
+  return lines.join("\n");
+}
+
+/** Writes a tree's structure as a template file (YAML, or JSON for `.json`); `out` may be a directory. */
+function exportTemplate(tree, out, name) {
+  let file = path.resolve(out);
+  if (isDir(file) || /[\\/]$/.test(out)) file = path.join(file, `${name || validateTemplateName(slugify(tree.id))}.yaml`);
+  if (!/\.(ya?ml|json)$/i.test(file)) throw new DTError(`template file ${out} must end in .yaml, .yml or .json`);
+  const fileName = templateNameOf(file);
+  if (name && name !== fileName) {
+    throw new DTError(`--name ${JSON.stringify(name)} must match the output file name ${JSON.stringify(fileName)} (or pass a directory to -o)`);
+  }
+  const data = treeToTemplate(tree, name || fileName);
+  const text = path.extname(file).toLowerCase() === ".json" ? JSON.stringify(data, null, 2) + "\n" : stringifyYaml(data);
+  const tpl = validateTemplate(path.extname(file).toLowerCase() === ".json" ? JSON.parse(text) : parseYaml(text, file), {
+    label: JSON.stringify(data.name),
+    name: data.name,
+  });
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, text);
+  return { name: tpl.name, path: file, nodes: countTemplateNodes(tpl.nodes) };
+}
+
+function modeDir(store, user) {
+  return user ? { source: "user", dir: userTemplatesDir() } : { source: "project", dir: path.join(store.dir, TEMPLATES_DIR) };
+}
+
+/** Validates a YAML/JSON template file and saves it as `<name>.yaml` in the project (or user) template dir. */
+function createMode(store, name, file, { user = false, force = false } = {}) {
+  validateTemplateName(name);
+  const src = path.resolve(file);
+  if (!isFile(src)) throw new DTError(`template file ${file} not found`);
+  const data = readTemplateFile(src);
+  if (isPlainObject(data)) data.name = name;
+  const label = `${JSON.stringify(name)} (${src})`;
+  validateTemplate(data, { label, name });
+  let text = null;
+  if (!/\.json$/i.test(src)) {
+    const raw = fs.readFileSync(src, "utf8").replace(/^\uFEFF/, "");
+    const renamed = /^name:.*$/m.test(raw) ? raw.replace(/^name:.*$/m, `name: ${name}`) : null;
+    try {
+      if (renamed !== null && same(parseYaml(renamed, src), data)) text = renamed;
+    } catch (e) {
+      if (!(e instanceof DTError)) throw e;
+    }
+  }
+  if (text === null) text = stringifyYaml(data);
+  validateTemplate(parseYaml(text, src), { label, name });
+  const { source, dir } = modeDir(store, user);
+  const dest = path.join(dir, `${name}.yaml`);
+  const existing = templateFiles(dir, name);
+  if (existing.length && !force) {
+    throw new DTError(`${source} mode ${JSON.stringify(name)} already exists at ${existing[0]}; pass --force to overwrite`);
+  }
+  fs.mkdirSync(dir, { recursive: true });
+  const tmp = path.join(dir, `.${name}.${process.pid}.tmp`);
+  fs.writeFileSync(tmp, text.endsWith("\n") ? text : text + "\n");
+  fs.renameSync(tmp, dest);
+  for (const f of existing) if (f !== dest) fs.rmSync(f, { force: true });
+  const shadowed = listTemplates(store).find((r) => r.name === name && r.path !== dest && !r.active);
+  return { name, source, path: dest, shadows: shadowed ? { source: shadowed.source, path: shadowed.path } : null };
+}
+
+/** Deletes a project (or user) template; built-in templates can never be removed. */
+function removeMode(store, name, { user = false } = {}) {
+  validateTemplateName(name);
+  const { source, dir } = modeDir(store, user);
+  const files = templateFiles(dir, name);
+  if (!files.length) {
+    const other = listTemplates(store).find((r) => r.name === name);
+    if (other && other.source === "builtin") {
+      throw new DTError(`${JSON.stringify(name)} is a built-in template and cannot be removed ` +
+        `(shadow it with \`dtree create-mode ${name} --yaml <file>\` instead)`);
+    }
+    if (other) {
+      const hint = other.source === "project" ? " (omit --user)" : other.path.startsWith(userTemplatesDir()) ? " (pass --user)" : "";
+      throw new DTError(`no ${source} mode ${JSON.stringify(name)} in ${dir}; it is a ${other.source} template at ${other.path}${hint}`);
+    }
+    throw new DTError(`mode ${JSON.stringify(name)} not found in ${dir}; run \`dtree modes\` to list them`);
+  }
+  for (const f of files) fs.rmSync(f, { force: true });
+  const next = listTemplates(store).find((r) => r.name === name && r.active);
+  return { name, source, removed: files, now_active: next ? { source: next.source, path: next.path } : null };
+}
+
+const EXAMPLE_TEMPLATE = `# Example custom decision-tree template ("mode").
+#
+# Copy this file to <name>.yaml, set \`name:\` to the same <name>, and edit the nodes:
+#   .decisions/templates/<name>.yaml               project templates (commit them with the app)
+#   ~/.config/decision-tree/templates/<name>.yaml  user templates (or a dir in $DTREE_TEMPLATES_PATH)
+# Or register any file:  dtree create-mode <name> --yaml ./my-template.yaml [--user]
+# Then:                  dtree new "<title>" --template <name>      (list them: dtree templates)
+#
+# Supported YAML: comments, key: value mappings, "- " lists, quoted strings, [a, b] lists,
+# and | / > multi-line text. Anchors, aliases, tags and flow mappings are rejected.
+template: 1                      # format version (required)
+name: example                    # must match the file name (required)
+title: Example custom template   # shown in \`dtree templates\` (required)
+description: |                   # optional; the tree description when \`dtree new\` has no -d
+  Replace these nodes with the questions your team always asks.
+tree_status: draft               # optional: draft|active|decided|implemented|archived
+nodes:                           # added under the root goal, in this order (required)
+  - title: Why are we doing this, and why now?
+    kind: why                    # questions: why|what|how|where|who|when|risk|other
+    body: |
+      What problem, for whom, and what evidence do we have?
+  - title: What is in and out of scope?
+    kind: what
+  - title: How should we build it?
+    kind: how
+    children:                    # nest to any depth
+      - title: Simplest thing that could work
+        type: option             # question|option|decision|task|note (never goal)
+        pros: [Fast to ship]
+        cons: [May not scale]
+  - title: Write the rollout checklist
+    type: task
+    assignee: agent
+`;
+
 // --------------------------------------------------------------------------- HTTP server
 
 class App {
@@ -652,6 +1453,9 @@ function api(app, method, p, body) {
   if (method === "GET" && p.length === 1 && p[0] === "projects") {
     return app.stores().map((s, i) => ({ id: String(i), name: s.name, path: s.root, trees: s.summaries() }));
   }
+  if (method === "GET" && p.length === 3 && p[0] === "projects" && p[2] === "templates") {
+    return listTemplates(app.store(p[1]));
+  }
   if (p.length < 3 || p[0] !== "projects" || p[2] !== "trees") throw new DTError("unknown endpoint");
   const store = app.store(p[1]);
   const rest = p.slice(3);
@@ -659,7 +1463,9 @@ function api(app, method, p, body) {
     const title = String(body.title || "").trim();
     if (!title) throw new DTError("title is required");
     const slug = validateSlug(body.id || slugify(title));
-    return store.createTree(slug, title, body.description || "", requestAuthor(body));
+    const template = body.template ? resolveTemplate(store, String(body.template), { allowPath: false }) : null;
+    const description = body.description || (template ? template.description : "");
+    return store.createTree(slug, title, description, requestAuthor(body), template);
   }
   if (!rest.length) throw new DTError("unknown endpoint");
   const slug = rest[0];
@@ -789,9 +1595,20 @@ const USAGE = `dtree ${VERSION} - question-driven decision trees stored in .deci
 
 usage: dtree <command> [options]
 
-  init [--refresh-tool]                       create .decisions/ and vendor the tool into .decisions/_tool/
+  init [--refresh-tool] [--templates]         create .decisions/ and vendor the tool into .decisions/_tool/
+                                              (--templates: also .decisions/templates/example.yaml)
   list                                        list trees in the project
-  new "<title>" [--id slug] [-d desc]         create a tree for a feature
+  new "<title>" [--id slug] [-d desc] [--template name|path]
+                                              create a tree for a feature, optionally seeded from a template
+                                              (--mode is an alias of --template)
+  templates                                   list templates (project > user > built-in); alias: modes
+  template show <name|path>                   print a template's outline
+  template export <tree> -o <file.yaml|dir> [--name N]
+                                              save a tree's structure as a reusable template
+  create-mode <name> --yaml <file> [--user] [--force]
+                                              validate a template and save it as .decisions/templates/<name>.yaml
+                                              (--user: ~/.config/decision-tree/templates/)
+  remove-mode <name> [--user]                 delete a project (or --user) template
   show <tree> [--body]                        print a tree
   node <tree> <node>                          print one node with its comment threads
   add <tree> -p <parent> [-t question|option|decision|task|note] [-k kind] --title T
@@ -816,7 +1633,7 @@ usage: dtree <command> [options]
 global options: -C/--project <app-root>  --author NAME  --as agent|human  --json  -h/--help  -V/--version
 kinds: ${KINDS.join(" ")}
 statuses: ${STATUSES.join(" ")}
-env: DTREE_AUTHOR, DTREE_AUTHOR_TYPE, DTREE_VERBOSE
+env: DTREE_AUTHOR, DTREE_AUTHOR_TYPE, DTREE_VERBOSE, DTREE_TEMPLATES_PATH, XDG_CONFIG_HOME
 `;
 
 const S = { type: "string" };
@@ -830,9 +1647,14 @@ const GLOBAL_OPTS = {
   version: { ...B, short: "V" },
 };
 const COMMANDS = {
-  init: { opts: { "refresh-tool": B } },
+  init: { opts: { "refresh-tool": B, templates: B } },
   list: {},
-  new: { args: ["title"], opts: { id: S, description: { ...S, short: "d" } } },
+  new: { args: ["title"], opts: { id: S, description: { ...S, short: "d" }, template: S, mode: S } },
+  templates: {},
+  modes: {},
+  template: { args: ["action", "target?"], opts: { out: { ...S, short: "o" }, name: S } },
+  "create-mode": { args: ["name"], required: ["yaml"], opts: { yaml: S, user: B, force: B } },
+  "remove-mode": { args: ["name"], opts: { user: B } },
   show: { args: ["tree"], opts: { body: B } },
   node: { args: ["tree", "node"] },
   add: {
@@ -882,6 +1704,30 @@ const COMMANDS = {
 
 class UsageError extends Error {}
 
+const TEXT_OPTS = ["body", "description", "rationale"];
+
+/** Rewrites `-b -text` as `--body=-text` so free-text values may start with "-". */
+function joinTextValues(argv, opts) {
+  const flags = new Map();
+  for (const name of TEXT_OPTS) {
+    if (!opts[name]) continue;
+    flags.set(`--${name}`, name);
+    if (opts[name].short) flags.set(`-${opts[name].short}`, name);
+  }
+  const out = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--") {
+      out.push(...argv.slice(i));
+      break;
+    }
+    const name = flags.get(argv[i]);
+    if (name && i + 1 < argv.length && argv[i + 1].startsWith("-") && argv[i + 1] !== "--") {
+      out.push(`--${name}=${argv[++i]}`);
+    } else out.push(argv[i]);
+  }
+  return out;
+}
+
 function parseCli(argv) {
   const takesValue = new Set(["-C", "--project", "--author", "--as"]);
   let idx = -1;
@@ -898,7 +1744,7 @@ function parseCli(argv) {
     throw new UsageError(`unknown command ${JSON.stringify(cmd)}`);
   }
   const spec = cmd ? COMMANDS[cmd] : {};
-  const rest = idx >= 0 ? [...argv.slice(0, idx), ...argv.slice(idx + 1)] : argv;
+  const rest = joinTextValues(idx >= 0 ? [...argv.slice(0, idx), ...argv.slice(idx + 1)] : argv, spec.opts || {});
   let parsed;
   try {
     parsed = parseArgs({ args: rest, options: { ...GLOBAL_OPTS, ...(spec.opts || {}) }, allowPositionals: true, strict: true });
@@ -918,6 +1764,14 @@ function parseCli(argv) {
   });
   for (const r of spec.required || []) if (o[r] === undefined) throw new UsageError(`${cmd}: --${r} is required`);
   if (o.as !== undefined && !AUTHOR_TYPES.includes(o.as)) throw new UsageError(`--as must be one of: ${AUTHOR_TYPES.join(", ")}`);
+  if (cmd === "new" && o.template !== undefined && o.mode !== undefined) {
+    throw new UsageError("new: use either --template or --mode (they are aliases), not both");
+  }
+  if (cmd === "template") {
+    if (!["show", "export"].includes(opts.action)) throw new UsageError(`template: unknown action ${JSON.stringify(opts.action)} (use show or export)`);
+    if (opts.target === undefined) throw new UsageError(`template ${opts.action}: missing <${opts.action === "show" ? "name" : "tree"}>`);
+    if (opts.action === "export" && o.out === undefined) throw new UsageError("template export: -o/--out is required");
+  }
   return opts;
 }
 
@@ -955,9 +1809,13 @@ function snapshotPayload(store, slugs) {
 function run(a, store, author) {
   const o = a.values;
   switch (a.cmd) {
-    case "init":
-      store.init(Boolean(o["refresh-tool"]));
-      return [{ dir: store.dir }, `initialized ${store.dir} (tool: ${path.join(store.dir, TOOL_DIR, SCRIPT_NAME)})`];
+    case "init": {
+      store.init(Boolean(o["refresh-tool"]), { templates: Boolean(o.templates) });
+      let text = `initialized ${store.dir} (tool: ${path.join(store.dir, TOOL_DIR, SCRIPT_NAME)})`;
+      const example = path.join(store.dir, TEMPLATES_DIR, "example.yaml");
+      if (o.templates) text += `\nexample template: ${example}\nuse it: dtree new "<title>" --template example`;
+      return [{ dir: store.dir, ...(o.templates ? { templates: path.dirname(example) } : {}) }, text];
+    }
     case "list": {
       const rows = store.summaries();
       const text = rows
@@ -969,8 +1827,46 @@ function run(a, store, author) {
       return [rows, text || `no trees in ${store.dir}`];
     }
     case "new": {
-      const tree = store.createTree(validateSlug(o.id || slugify(a.title)), a.title, o.description || "", author);
-      return [tree, `created tree ${tree.id} with root goal ${tree.root_id} at ${store.treePath(tree.id)}`];
+      const slug = validateSlug(o.id || slugify(a.title));
+      const name = o.template ?? o.mode;
+      const template = name !== undefined ? resolveTemplate(store, name) : null;
+      const description = o.description ?? (template ? template.description : "");
+      const tree = store.createTree(slug, a.title, description, author, template);
+      const seeded = template ? ` and ${countTemplateNodes(template.nodes)} node(s) from template ${template.name}` : "";
+      return [tree, `created tree ${tree.id} with root goal ${tree.root_id}${seeded} at ${store.treePath(tree.id)}`];
+    }
+    case "templates":
+    case "modes": {
+      const rows = listTemplates(store);
+      const width = Math.max(4, ...rows.map((r) => r.name.length));
+      const text = rows
+        .map((r) => {
+          const note = r.error ? `  INVALID: ${r.error}` : r.active ? "" : `  (shadowed by ${r.shadowed_by.source})`;
+          return `${r.active ? "*" : " "} ${r.name.padEnd(width)}  ${r.source.padEnd(7)}  ${r.title}  ${r.path}${note}`;
+        })
+        .join("\n");
+      const dirs = templateDirs(store).map((d) => `  ${d.source.padEnd(7)}  ${d.dir}`).join("\n");
+      return [rows, (text ? `${text}\n(* = used by --template <name>)` : "no templates found") + `\nsearched:\n${dirs}`];
+    }
+    case "template": {
+      if (a.action === "show") {
+        const tpl = resolveTemplate(store, a.target);
+        return [tpl, renderTemplate(tpl)];
+      }
+      const res = exportTemplate(store.load(a.target), o.out, o.name);
+      return [res, `exported ${res.nodes} node(s) as template ${res.name} to ${res.path}\n` +
+        `use it: dtree new "<title>" --template ${path.relative(process.cwd(), res.path) || res.path}` +
+        ` (or copy it to .decisions/templates/ and use --template ${res.name})`];
+    }
+    case "create-mode": {
+      const res = createMode(store, a.name, o.yaml, { user: Boolean(o.user), force: Boolean(o.force) });
+      const note = res.shadows ? `\nnote: shadows the ${res.shadows.source} template at ${res.shadows.path}` : "";
+      return [res, `saved ${res.source} mode ${res.name} to ${res.path}${note}\nuse it: dtree new "<title>" --mode ${res.name}`];
+    }
+    case "remove-mode": {
+      const res = removeMode(store, a.name, { user: Boolean(o.user) });
+      const note = res.now_active ? `\n${res.name} now resolves to the ${res.now_active.source} template at ${res.now_active.path}` : "";
+      return [res, `removed ${res.source} mode ${res.name} (${res.removed.join(", ")})${note}`];
     }
     case "show": {
       const tree = store.load(a.tree);
@@ -1149,11 +2045,14 @@ function main(argv = process.argv.slice(2)) {
 }
 
 module.exports = {
-  VERSION, SCHEMA_VERSION, NODE_TYPES, KINDS, STATUSES, TREE_STATUSES, LINK_TYPES, AUTHOR_TYPES,
+  VERSION, SCHEMA_VERSION, TEMPLATE_VERSION, NODE_TYPES, KINDS, STATUSES, TREE_STATUSES, LINK_TYPES, AUTHOR_TYPES,
   DTError, Store, App, findProjectRoot, scanProjects, slugify, validateSlug,
   addNode, updateNode, moveNode, deleteNode, chooseOption, addComment, resolveComment, addLink, removeLink,
   updateTreeMeta, threadRoot, threads, inbox, review, summarize, renderText, renderStaticHtml, snapshotPayload,
   createServer, installSkill, parseCli, main,
+  parseYaml, stringifyYaml, validateTemplate, loadTemplate, resolveTemplate, listTemplates, templateDirs,
+  applyTemplate, treeToTemplate, exportTemplate, renderTemplate, createMode, removeMode,
+  builtinTemplatesDir, userTemplatesDir,
 };
 
 if (require.main === module) {
