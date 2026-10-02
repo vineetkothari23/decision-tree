@@ -1,0 +1,46 @@
+{
+  "name": "@vineetkothari23/decision-tree",
+  "version": "0.1.0",
+  "description": "Question-driven decision trees for planning software features: JSON in each app's .decisions/, an agent CLI, and a local HTML viewer for human-agent coordination. Ships as an agent skill.",
+  "keywords": [
+    "agent",
+    "skill",
+    "agent-skills",
+    "decision-tree",
+    "planning",
+    "adr",
+    "devin",
+    "claude"
+  ],
+  "license": "MIT",
+  "author": "Vineet Kothari",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vineetkothari23/decision-tree.git"
+  },
+  "homepage": "https://github.com/vineetkothari23/decision-tree#readme",
+  "bin": {
+    "decision-tree": "skills/decision-tree/scripts/dtree.cjs",
+    "dtree": "skills/decision-tree/scripts/dtree.cjs"
+  },
+  "main": "skills/decision-tree/scripts/dtree.cjs",
+  "files": [
+    "skills/",
+    ".devin-plugin/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test",
+    "lint": "eslint ."
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.11.0",
+    "globals": "17.12.0"
+  }
+}

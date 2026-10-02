@@ -1,0 +1,747 @@
+{
+  "schema_version": 1,
+  "id": "add-sso-login",
+  "title": "Add SSO login",
+  "description": "Enterprise customers want to sign in with their identity provider.",
+  "status": "draft",
+  "created_at": "2026-10-02T03:32:03Z",
+  "updated_at": "2026-10-02T03:32:52Z",
+  "created_by": {
+    "name": "agent",
+    "type": "agent"
+  },
+  "revision": 22,
+  "next_id": 18,
+  "root_id": "g1",
+  "nodes": {
+    "g1": {
+      "id": "g1",
+      "type": "goal",
+      "kind": null,
+      "title": "Add SSO login",
+      "body": "Enterprise customers want to sign in with their identity provider.",
+      "status": "open",
+      "parent": null,
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-02T03:32:03Z",
+      "updated_at": "2026-10-02T03:32:03Z"
+    },
+    "q2": {
+      "id": "q2",
+      "type": "question",
+      "kind": "why",
+      "title": "Why do we need SSO now?",
+      "body": "Validate demand before building.",
+      "status": "decided",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o3",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-02T03:32:03Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "open",
+          "to": "decided"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-02T03:32:03Z",
+      "updated_at": "2026-10-02T03:32:03Z"
+    },
+    "o3": {
+      "id": "o3",
+      "type": "option",
+      "kind": null,
+      "title": "3 enterprise deals blocked on SSO",
+      "body": "",
+      "status": "chosen",
+      "parent": "q2",
+      "pros": [
+        "Direct revenue impact"
+      ],
+      "cons": [
+        "Only 3 data points"
+      ],
+      "rationale": "Revenue blocked today; SOC2 also benefits.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-02T03:32:03Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "open",
+          "to": "chosen"
+        },
+        {
+          "at": "2026-10-02T03:32:03Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "Revenue blocked today; SOC2 also benefits."
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-02T03:32:03Z",
+      "updated_at": "2026-10-02T03:32:03Z"
+    },
+    "o4": {
+      "id": "o4",
+      "type": "option",
+      "kind": null,
+      "title": "Security/compliance checklist (SOC2)",
+      "body": "",
+      "status": "open",
+      "parent": "q2",
+      "pros": [
+        "Unblocks many deals"
+      ],
+      "cons": [
+        "Could be met with MFA instead"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-02T03:32:03Z",
+      "updated_at": "2026-10-02T03:32:03Z"
+    },
+    "q5": {
+      "id": "q5",
+      "type": "question",
+      "kind": "what",
+      "title": "Which protocols do we support?",
+      "body": "",
+      "status": "decided",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o8",
+      "links": [],
+      "comments": [
+        {
+          "id": "c11",
+          "author": "Vineet",
+          "author_type": "human",
+          "text": "Do we really need SAML? Check what the 3 deals use.",
+          "reply_to": null,
+          "resolved": false,
+          "created_at": "2026-10-02T03:32:04Z"
+        },
+        {
+          "id": "c12",
+          "author": "agent",
+          "author_type": "agent",
+          "text": "Checked: 2 use Okta (both), 1 uses ADFS (SAML only).",
+          "reply_to": "c11",
+          "resolved": false,
+          "created_at": "2026-10-02T03:32:04Z"
+        },
+        {
+          "id": "c16",
+          "author": "Vineet",
+          "author_type": "human",
+          "text": "Lets go OIDC + SAML via broker",
+          "reply_to": null,
+          "resolved": true,
+          "created_at": "2026-10-02T03:32:43Z"
+        },
+        {
+          "id": "c17",
+          "author": "agent",
+          "author_type": "agent",
+          "text": "Agreed — chose o8 (broker).",
+          "reply_to": "c16",
+          "resolved": false,
+          "created_at": "2026-10-02T03:32:52Z"
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-10-02T03:32:52Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "open",
+          "to": "decided"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-02T03:32:03Z",
+      "updated_at": "2026-10-02T03:32:52Z"
+    },
+    "o6": {
+      "id": "o6",
+      "type": "option",
+      "kind": null,
+      "title": "SAML 2.0 only",
+      "body": "",
+      "status": "rejected",
+      "parent": "q5",
+      "pros": [
+        "What enterprises ask for"
+      ],
+      "cons": [
+        "XML pain"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-02T03:32:52Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "open",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-02T03:32:03Z",
+      "updated_at": "2026-10-02T03:32:52Z"
+    },
+    "o7": {
+      "id": "o7",
+      "type": "option",
+      "kind": null,
+      "title": "OIDC only",
+      "body": "",
+      "status": "rejected",
+      "parent": "q5",
+      "pros": [
+        "Modern, simple"
+      ],
+      "cons": [
+        "Some IdPs SAML-only"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-02T03:32:52Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "open",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-02T03:32:03Z",
+      "updated_at": "2026-10-02T03:32:52Z"
+    },
+    "o8": {
+      "id": "o8",
+      "type": "option",
+      "kind": null,
+      "title": "Both via a broker (WorkOS/Auth0)",
+      "body": "",
+      "status": "chosen",
+      "parent": "q5",
+      "pros": [
+        "Fast"
+      ],
+      "cons": [
+        "Vendor cost + lock-in"
+      ],
+      "rationale": "Covers Okta (OIDC) and ADFS (SAML) per c12; within budget.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-02T03:32:52Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "open",
+          "to": "chosen"
+        },
+        {
+          "at": "2026-10-02T03:32:52Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "Covers Okta (OIDC) and ADFS (SAML) per c12; within budget."
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-02T03:32:04Z",
+      "updated_at": "2026-10-02T03:32:52Z"
+    },
+    "q9": {
+      "id": "q9",
+      "type": "question",
+      "kind": "how",
+      "title": "Build in-house or use a vendor?",
+      "body": "",
+      "status": "needs-input",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [
+        {
+          "target": "q5",
+          "type": "depends-on"
+        }
+      ],
+      "comments": [
+        {
+          "id": "c13",
+          "author": "Vineet",
+          "author_type": "human",
+          "text": "What is the budget ceiling for a vendor?",
+          "reply_to": null,
+          "resolved": false,
+          "created_at": "2026-10-02T03:32:04Z"
+        },
+        {
+          "id": "c15",
+          "author": "Vineet",
+          "author_type": "human",
+          "text": "budget is 500/mo",
+          "reply_to": "c13",
+          "resolved": false,
+          "created_at": "2026-10-02T03:32:20Z"
+        }
+      ],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-02T03:32:04Z",
+      "updated_at": "2026-10-02T03:32:04Z"
+    },
+    "q10": {
+      "id": "q10",
+      "type": "question",
+      "kind": "where",
+      "title": "Where does SSO config live in the product?",
+      "body": "",
+      "status": "exploring",
+      "parent": "g1",
+      "pros": [
+        "a",
+        "b"
+      ],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-02T03:32:20Z",
+          "by": {
+            "name": "human",
+            "type": "human"
+          },
+          "field": "status",
+          "from": "open",
+          "to": "exploring"
+        },
+        {
+          "at": "2026-10-02T03:32:20Z",
+          "by": {
+            "name": "human",
+            "type": "human"
+          },
+          "field": "pros",
+          "from": [],
+          "to": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-02T03:32:04Z",
+      "updated_at": "2026-10-02T03:32:20Z"
+    },
+    "o14": {
+      "id": "o14",
+      "type": "option",
+      "kind": null,
+      "title": "Use WorkOS",
+      "body": "",
+      "status": "open",
+      "parent": "q9",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "created_at": "2026-10-02T03:32:20Z",
+      "updated_at": "2026-10-02T03:32:20Z"
+    }
+  },
+  "activity": [
+    {
+      "at": "2026-10-02T03:32:03Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "g1",
+      "detail": "goal: Add SSO login"
+    },
+    {
+      "at": "2026-10-02T03:32:03Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q2",
+      "detail": "question: Why do we need SSO now?"
+    },
+    {
+      "at": "2026-10-02T03:32:03Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o3",
+      "detail": "option: 3 enterprise deals blocked on SSO"
+    },
+    {
+      "at": "2026-10-02T03:32:03Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o4",
+      "detail": "option: Security/compliance checklist (SOC2)"
+    },
+    {
+      "at": "2026-10-02T03:32:03Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o3",
+      "detail": "status=chosen, rationale"
+    },
+    {
+      "at": "2026-10-02T03:32:03Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q2",
+      "detail": "status=decided"
+    },
+    {
+      "at": "2026-10-02T03:32:03Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "choose",
+      "node": "o3",
+      "detail": "Revenue blocked today; SOC2 also benefits."
+    },
+    {
+      "at": "2026-10-02T03:32:03Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q5",
+      "detail": "question: Which protocols do we support?"
+    },
+    {
+      "at": "2026-10-02T03:32:03Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o6",
+      "detail": "option: SAML 2.0 only"
+    },
+    {
+      "at": "2026-10-02T03:32:03Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o7",
+      "detail": "option: OIDC only"
+    },
+    {
+      "at": "2026-10-02T03:32:04Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o8",
+      "detail": "option: Both via a broker (WorkOS/Auth0)"
+    },
+    {
+      "at": "2026-10-02T03:32:04Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q9",
+      "detail": "question: Build in-house or use a vendor?"
+    },
+    {
+      "at": "2026-10-02T03:32:04Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q10",
+      "detail": "question: Where does SSO config live in the product?"
+    },
+    {
+      "at": "2026-10-02T03:32:04Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "link",
+      "node": "q9",
+      "detail": "depends-on q5"
+    },
+    {
+      "at": "2026-10-02T03:32:04Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "comment",
+      "node": "q5",
+      "detail": "Do we really need SAML? Check what the 3 deals use."
+    },
+    {
+      "at": "2026-10-02T03:32:04Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "comment",
+      "node": "q5",
+      "detail": "Checked: 2 use Okta (both), 1 uses ADFS (SAML only)."
+    },
+    {
+      "at": "2026-10-02T03:32:04Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "comment",
+      "node": "q9",
+      "detail": "What is the budget ceiling for a vendor?"
+    },
+    {
+      "at": "2026-10-02T03:32:20Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "o14",
+      "detail": "option: Use WorkOS"
+    },
+    {
+      "at": "2026-10-02T03:32:20Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "comment",
+      "node": "q9",
+      "detail": "budget is 500/mo"
+    },
+    {
+      "at": "2026-10-02T03:32:20Z",
+      "by": {
+        "name": "human",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "q10",
+      "detail": "status=exploring, pros"
+    },
+    {
+      "at": "2026-10-02T03:32:43Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "comment",
+      "node": "q5",
+      "detail": "Lets go OIDC + SAML via broker"
+    },
+    {
+      "at": "2026-10-02T03:32:52Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o8",
+      "detail": "status=chosen, rationale"
+    },
+    {
+      "at": "2026-10-02T03:32:52Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o6",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-02T03:32:52Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o7",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-02T03:32:52Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q5",
+      "detail": "status=decided"
+    },
+    {
+      "at": "2026-10-02T03:32:52Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "choose",
+      "node": "o8",
+      "detail": "Covers Okta (OIDC) and ADFS (SAML) per c12; within budget."
+    },
+    {
+      "at": "2026-10-02T03:32:52Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "comment",
+      "node": "q5",
+      "detail": "Agreed — chose o8 (broker)."
+    },
+    {
+      "at": "2026-10-02T03:32:52Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "resolve",
+      "node": "q5",
+      "detail": "c16"
+    }
+  ]
+}

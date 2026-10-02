@@ -11,7 +11,7 @@ Use this skill whenever you plan a feature, design change, or any non-trivial te
 
 - Each application has its own `<app-root>/.decisions/` folder (commit it with the app).
 - One JSON file per feature tree: `.decisions/<tree-slug>.json`.
-- `.decisions/_tool/` holds a vendored copy of the tool (`dtree.py` + `viewer.html`) so anyone can run it without this skill.
+- `.decisions/_tool/` holds a vendored copy of the tool (`dtree.cjs` + `viewer.html`) so anyone can run it without this skill.
 - Node types: `goal` (root, one per tree), `question`, `option`, `decision`, `task`, `note`. Question kinds: `why what how where who when risk other`.
 - Node statuses: `open exploring needs-input blocked decided chosen rejected deferred done`. Tree statuses: `draft active decided implemented archived`.
 - Every node has: `title`, `body`, `pros[]`, `cons[]`, `rationale`, `assignee`, `links[]` (graph edges: `depends-on blocks relates-to supersedes duplicates`), `comments[]` (threaded via `reply_to`, `resolved` flag, `author_type` = `agent` | `human`), `history[]`. Trees also keep an `activity` log and a `revision` counter.
@@ -19,12 +19,12 @@ Use this skill whenever you plan a feature, design change, or any non-trivial te
 
 ## Locate the tool
 
-The tool is a single stdlib-only Python 3 script (no installs). Prefer the app's vendored copy; otherwise use the one shipped with this skill:
+The tool is a single dependency-free Node.js script (Node >= 18). Prefer the app's vendored copy, then the one shipped with this skill, then npm:
 
 ```bash
-DTREE=.decisions/_tool/dtree.py
-[ -f "$DTREE" ] || DTREE=$(find / -path '*/skills/decision-tree/scripts/dtree.py' -not -path '/proc/*' 2>/dev/null | head -1)
-dt() { python3 "$DTREE" "$@"; }
+DTREE=.decisions/_tool/dtree.cjs
+[ -f "$DTREE" ] || DTREE=$(find / -path '*/skills/decision-tree/scripts/dtree.cjs' -not -path '/proc/*' 2>/dev/null | head -1)
+if [ -n "$DTREE" ]; then dt() { node "$DTREE" "$@"; }; else dt() { npx -y @vineetkothari23/decision-tree "$@"; }; fi
 ```
 
 Run from the app root (or pass `-C <app-root>`). Set `DTREE_AUTHOR=<your agent name>` so your entries are attributed. Add `--json` to any command for machine-readable output.
@@ -76,6 +76,7 @@ dt set-tree <tree> [--title] [-d] [--status draft|active|decided|implemented|arc
 dt inbox [tree] [--for agent|human]          dt review <tree>
 dt serve [--port 8765] [--host 127.0.0.1] [--scan DIR]... [--extra-project DIR]...
 dt render -o out.html [--tree slug]
+dt install-skill [--dir DIR] [--force]       (copy this skill into DIR/decision-tree; default ./.agents/skills)
 global: -C <app-root>  --author NAME  --as agent|human  --json
 ```
 
