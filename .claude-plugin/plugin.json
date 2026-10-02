@@ -1,0 +1,14 @@
+{
+  "name": "decision-tree",
+  "version": "0.1.0",
+  "description": "Question-driven decision trees for planning software features, stored as JSON in each app's .decisions/ folder, with a local HTML viewer for humans and agents to collaborate.",
+  "author": {
+    "name": "Vineet Kothari",
+    "url": "https://github.com/vineetkothari23"
+  },
+  "homepage": "https://github.com/vineetkothari23/decision-tree#readme",
+  "repository": "https://github.com/vineetkothari23/decision-tree",
+  "license": "MIT",
+  "keywords": ["planning", "decision-tree", "adr", "skills"],
+  "skills": ["./skills/decision-tree"]
+}

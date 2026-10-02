@@ -39,6 +39,8 @@ function sampleTree(store) {
 test("package.json version matches VERSION", () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
   assert.equal(pkg.version, dt.VERSION);
+  const plugin = JSON.parse(fs.readFileSync(path.join(__dirname, "..", ".claude-plugin", "plugin.json"), "utf8"));
+  assert.equal(plugin.version, dt.VERSION);
 });
 
 test("createTree writes a v1 tree with a root goal", () => {

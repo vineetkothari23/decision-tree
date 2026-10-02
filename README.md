@@ -12,19 +12,40 @@ chosen path with its rationale. Humans review, comment, and steer the same tree 
 
 ## Install
 
+### The skill
+
+**Any agent (Claude Code, Codex, Cursor, OpenCode, ...)** via [skills.sh](https://skills.sh):
+
 ```bash
-# Run without installing
-npx @vineetkothari23/decision-tree --help
-
-# Or install the CLI globally (provides `dtree` and `decision-tree`)
-npm install -g @vineetkothari23/decision-tree
-
-# Install the agent skill into a project (default: ./.agents/skills/decision-tree)
-npx @vineetkothari23/decision-tree install-skill
-npx @vineetkothari23/decision-tree install-skill --dir .claude/skills   # or any skills directory
+npx skills@latest add vineetkothari23/decision-tree
 ```
 
-For Devin, install this repo as a plugin (it contains `.devin-plugin/plugin.json`).
+**Claude Code plugin:**
+
+```bash
+claude plugin marketplace add vineetkothari23/decision-tree
+claude plugin install decision-tree@vineetkothari23
+```
+
+**Devin:** install this repo as a plugin (it contains `.devin-plugin/plugin.json`).
+
+**npm:** the package bundles the skill under `skills/decision-tree/`, so
+[`skills-npm`](https://github.com/antfu/skills-npm) picks it up from `node_modules`, or copy it explicitly:
+
+```bash
+npx @vineetkothari23/decision-tree install-skill                       # ./.agents/skills/decision-tree
+npx @vineetkothari23/decision-tree install-skill --dir .claude/skills  # or any skills directory
+```
+
+### The CLI
+
+The skill carries its own copy of the CLI (`scripts/dtree.cjs`), so agents need only Node >= 18.
+To use it directly:
+
+```bash
+npx @vineetkothari23/decision-tree --help        # run without installing
+npm install -g @vineetkothari23/decision-tree    # provides `dtree` and `decision-tree`
+```
 
 ## Quick start
 
@@ -53,6 +74,7 @@ skills/decision-tree/SKILL.md                 agent instructions (workflow + com
 skills/decision-tree/scripts/dtree.cjs        CLI, JSON store, HTTP API server (npm bin)
 skills/decision-tree/scripts/viewer.html      single-file viewer (no external dependencies)
 .devin-plugin/plugin.json                     Devin plugin manifest
+.claude-plugin/                               Claude Code plugin + single-plugin marketplace
 test/                                         node:test suite
 ```
 
@@ -64,7 +86,7 @@ npm test
 npm run lint
 ```
 
-Releases: bump `version` in `package.json` and `VERSION` in `dtree.cjs`, then push a `v<version>` tag;
+Releases: bump `version` in `package.json`, `.claude-plugin/plugin.json` and `VERSION` in `dtree.cjs`, then push a `v<version>` tag;
 the publish workflow runs tests and publishes to npm (requires the `NPM_TOKEN` repository secret).
 
 ## License
