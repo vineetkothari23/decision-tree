@@ -1,0 +1,17 @@
+{
+  "name": "vineetkothari23",
+  "owner": {
+    "name": "Vineet Kothari",
+    "url": "https://github.com/vineetkothari23"
+  },
+  "description": "Vineet Kothari's agent skills.",
+  "plugins": [
+    {
+      "name": "decision-tree",
+      "source": "./",
+      "description": "Plan software features as question-driven decision trees with a local HTML viewer for human-agent coordination.",
+      "category": "productivity",
+      "keywords": ["planning", "decision-tree", "adr"]
+    }
+  ]
+}
