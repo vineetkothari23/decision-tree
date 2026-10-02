@@ -14,7 +14,7 @@ const os = require("node:os");
 const net = require("node:net");
 const { parseArgs } = require("node:util");
 
-const VERSION = "0.1.2";
+const VERSION = "0.2.0";
 const SCHEMA_VERSION = 1;
 const DECISIONS_DIR = ".decisions";
 const TOOL_DIR = "_tool";
