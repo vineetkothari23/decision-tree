@@ -210,8 +210,7 @@ function setHash(){ const h = S.slug ? `#/p/${S.pid}/t/${encodeURIComponent(S.sl
 function parseHash(){ const m = location.hash.match(/^#\/p\/([^/]+)\/t\/([^/]+)(?:\/n\/([^/]+))?/); return m ? {pid:m[1], slug:decodeURIComponent(m[2]), sel:m[3]||null} : null; }
 
 async function refreshProjects(){
-  if (RO) { S.projects = STATIC.projects; renderSidebar(); return; }
-  try {
+  if (!RO) try {
     S.projects = await api("GET", "/projects");
     S.online = true;
     if (S.tree){
@@ -221,6 +220,7 @@ async function refreshProjects(){
       }
     }
   } catch { S.online = false; }
+  else S.projects = STATIC.projects;
   $("#live").textContent = RO ? "read-only snapshot" + (STATIC.generated_at ? " · " + fmt(STATIC.generated_at) : "") : (S.online ? "● live" : "● offline");
   $("#live").className = "live" + (S.online || RO ? "" : " off");
   renderSidebar();
@@ -425,7 +425,7 @@ function renderDetails(){
   d.append(
     el("div", {class:"row tight", style:{gap:"6px"}}, el("span", {class:"pill", style:{background:COLORS[n.type], color:"#fff"}}, typeLabel(n)), el("span", {class:"cm"}, n.id),
       el("span", {style:{flex:1}}), el("button", {class:"small", onclick:() => select(null)}, "✕")),
-    parent ? el("div", {class:"cm", style:{marginTop:"6px"}}, "under ", el("a", {href:"#", onclick:e => { e.preventDefault(); select(parent.id); }}, `${parent.id} · ${parent.title}`)) : null,
+    parent ? el("div", {class:"cm", style:{marginTop:"6px"}}, "under ", el("a", {href:"#", onclick:e => { e.preventDefault(); select(parent.id); }}, `${parent.id} · ${parent.title}`)) : "",
     el("label", {}, "Title"), field("title", el("input", {value:n.title})),
     el("div", {class:"row"},
       el("div", {}, el("label", {}, "Status"), field("status", el("select", {}, ...S.meta.statuses.map(s => el("option", {value:s, selected:n.status === s}, s))))),
