@@ -279,12 +279,24 @@ function renderSidebar(){
 }
 function newTreeDialog(p){
   const d = $("#dlg"); d.replaceChildren();
-  const title = el("input", {placeholder:"e.g. Add SSO login"}), desc = el("textarea", {placeholder:"What is the feature and what outcome do we want?"});
-  d.append(el("h3", {style:{marginTop:0}}, `New decision tree in ${p.name}`), el("label", {}, "Feature / goal"), title, el("label", {}, "Description"), desc,
+  const DESC_HINT = "What is the feature and what outcome do we want?";
+  const title = el("input", {placeholder:"e.g. Add SSO login"}), desc = el("textarea", {placeholder:DESC_HINT});
+  const tpl = el("select", {id:"new-tree-template", onchange:() => {
+    const t = tpls.find(x => x.name === tpl.value);
+    desc.placeholder = t && t.description ? `${t.description}\n(used when left empty)` : DESC_HINT;
+  }}, el("option", {value:""}, "Blank tree (no template)"));
+  let tpls = [];
+  if (!RO) api("GET", `/projects/${p.id}/templates`).then(rows => {
+    tpls = rows.filter(r => r.active && !r.error);
+    tpl.append(...tpls.map(r => el("option", {value:r.name, title:r.path}, `${r.title} — ${r.name} (${r.source}, ${r.nodes} nodes)`)));
+  }).catch(() => {});
+  d.append(el("h3", {style:{marginTop:0}}, `New decision tree in ${p.name}`), el("label", {}, "Feature / goal"), title,
+    el("label", {class:"edit-only"}, "Start from template"), el("div", {class:"edit-only"}, tpl),
+    el("label", {}, "Description"), desc,
     el("div", {class:"row tight", style:{justifyContent:"flex-end", marginTop:"14px"}},
       el("button", {onclick:() => d.close()}, "Cancel"),
       el("button", {class:"primary", onclick: async () => {
-        try { const t = await api("POST", `/projects/${p.id}/trees`, {title:title.value, description:desc.value}); d.close(); await refreshProjects(); openTree(p.id, t.id); }
+        try { const t = await api("POST", `/projects/${p.id}/trees`, {title:title.value, description:desc.value, ...(tpl.value ? {template:tpl.value} : {})}); d.close(); await refreshProjects(); openTree(p.id, t.id); }
         catch(e){ alert(e.message); } }}, "Create")));
   d.showModal(); title.focus();
 }
@@ -522,7 +534,7 @@ function addChildForm(n){
 function renderOverview(d){
   const t = S.tree, sum = {};
   for (const n of Object.values(t.nodes)) sum[n.status] = (sum[n.status]||0) + 1;
-  d.append(el("h2", {}, t.title), el("div", {class:"row tight", style:{gap:"6px"}}, pill(t.status), el("span", {class:"cm"}, `${Object.keys(t.nodes).length} nodes · rev ${t.revision} · updated ${ago(t.updated_at)}`)));
+  d.append(el("h2", {}, t.title), el("div", {class:"row tight", style:{gap:"6px"}}, pill(t.status), el("span", {class:"cm"}, `${Object.keys(t.nodes).length} nodes · rev ${t.revision} · updated ${ago(t.updated_at)}${t.template ? " · template " + t.template : ""}`)));
   if (t.description) d.append(el("p", {class:"prewrap"}, t.description));
   d.append(el("div", {}, ...Object.entries(sum).map(([s, c]) => el("span", {style:{marginRight:"6px"}}, pill(s), " ", c))));
   const sec = (title, items, empty) => {
