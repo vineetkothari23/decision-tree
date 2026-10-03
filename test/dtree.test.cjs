@@ -550,6 +550,7 @@ test("built-in templates resolve next to the script and are vendored by init", (
   const script = path.join(skill, "scripts", "dtree.cjs");
   fs.copyFileSync(SCRIPT, script);
   fs.copyFileSync(path.join(path.dirname(SCRIPT), "viewer.html"), path.join(skill, "scripts", "viewer.html"));
+  fs.cpSync(path.join(path.dirname(SCRIPT), "lib"), path.join(skill, "scripts", "lib"), { recursive: true });
   fs.writeFileSync(path.join(skill, "templates", "shipped.yaml"), tplText("shipped", "Builtin one"));
   fs.writeFileSync(path.join(skill, "templates", "shadowed.yaml"), tplText("shadowed", "Builtin two"));
   const app = tmpdir();
@@ -803,6 +804,7 @@ test("remove-mode refuses built-in templates", () => {
   fs.mkdirSync(path.join(skill, "templates"));
   fs.copyFileSync(SCRIPT, path.join(skill, "scripts", "dtree.cjs"));
   fs.copyFileSync(path.join(path.dirname(SCRIPT), "viewer.html"), path.join(skill, "scripts", "viewer.html"));
+  fs.cpSync(path.join(path.dirname(SCRIPT), "lib"), path.join(skill, "scripts", "lib"), { recursive: true });
   fs.writeFileSync(path.join(skill, "templates", "shipped.yaml"), tplText("shipped"));
   const r = cliEnv(tmpdir(), { XDG_CONFIG_HOME: tmpdir() }, path.join(skill, "scripts", "dtree.cjs"), "remove-mode", "shipped");
   assert.equal(r.code, 1);
