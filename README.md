@@ -161,7 +161,17 @@ mode in `.decisions/templates/<name>.yaml`.
 
 ```
 skills/decision-tree/SKILL.md                 agent instructions (workflow + command reference)
-skills/decision-tree/scripts/dtree.cjs        CLI, JSON store, HTTP API server (npm bin)
+skills/decision-tree/scripts/dtree.cjs        npm bin + package entry; re-exports lib/index.cjs
+skills/decision-tree/scripts/lib/             implementation, one concern per module:
+  constants.cjs, paths.cjs, util.cjs            vocabularies/versions, tool file locations, shared helpers
+  core/tree.cjs, core/comments.cjs              tree data operations (nodes, links, meta) and comment threads
+  store/                                        .decisions/ files, write lock, project discovery, _tool vendoring
+  review/                                       inbox, review checks, per-tree summaries
+  render/                                       CLI text outlines, static HTML snapshots
+  yaml.cjs                                      dependency-free YAML subset parser/serializer
+  templates/                                    template schema, lookup, apply, export, modes
+  http/                                         API route table, server (Host/Origin checks), project set
+  cli/                                          argument specs, command handler tables, main
 skills/decision-tree/scripts/viewer.html      single-file viewer (no external dependencies)
 skills/decision-tree/templates/               built-in tree templates (YAML)
 .devin-plugin/plugin.json                     Devin plugin manifest
@@ -177,7 +187,7 @@ npm test
 npm run lint
 ```
 
-Releases: bump `version` in `package.json`, `.claude-plugin/plugin.json` and `VERSION` in `dtree.cjs`, then push a `v<version>` tag;
+Releases: bump `version` in `package.json`, `.claude-plugin/plugin.json` and `VERSION` in `scripts/lib/constants.cjs`, then push a `v<version>` tag;
 the publish workflow runs tests and publishes to npm (requires the `NPM_TOKEN` repository secret).
 
 ## License

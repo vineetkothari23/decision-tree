@@ -11,7 +11,7 @@ Use this skill whenever you plan a feature, design change, or any non-trivial te
 
 - Each application has its own `<app-root>/.decisions/` folder (commit it with the app).
 - One JSON file per feature tree: `.decisions/<tree-slug>.json`.
-- `.decisions/_tool/` holds a vendored copy of the tool (`dtree.cjs`, `viewer.html`, built-in `templates/`) so anyone can run it without this skill. `.decisions/templates/` holds the project's own tree templates.
+- `.decisions/_tool/` holds a vendored copy of the tool (`dtree.cjs`, `lib/`, `viewer.html`, built-in `templates/`) so anyone can run it without this skill. `.decisions/templates/` holds the project's own tree templates.
 - Node types: `goal` (root, one per tree), `question`, `option`, `decision`, `task`, `note`. Question kinds: `why what how where who when risk other`.
 - Node statuses: `open exploring needs-input blocked decided chosen rejected deferred done`. Tree statuses: `draft active decided implemented archived`.
 - Every node has: `title`, `body`, `pros[]`, `cons[]`, `rationale`, `assignee`, `links[]` (graph edges: `depends-on blocks relates-to supersedes duplicates`), `comments[]` (threaded via `reply_to`, `resolved` flag, `author_type` = `agent` | `human`), `history[]`. Trees also keep an `activity` log and a `revision` counter.
