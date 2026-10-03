@@ -29,10 +29,37 @@ const STATUSES = ["open", "exploring", "needs-input", "blocked", "decided", "cho
 const TREE_STATUSES = ["draft", "active", "decided", "implemented", "archived"];
 const LINK_TYPES = ["depends-on", "blocks", "relates-to", "supersedes", "duplicates"];
 const AUTHOR_TYPES = ["agent", "human"];
-const EDITABLE_NODE_FIELDS = ["title", "body", "kind", "status", "pros", "cons", "rationale", "assignee", "type"];
+const EDITABLE_NODE_FIELDS = ["title", "body", "kind", "status", "pros", "cons", "rationale", "assignee", "type", "labels", "lock", "fields"];
 const ACTIVITY_LIMIT = 500;
 const SLUG_RE = /^[a-z0-9][a-z0-9._-]{0,79}$/;
-const CLOSED_STATUSES = new Set(["decided", "chosen", "rejected", "deferred", "done"]);
+const ROLES = ["open", "accepted", "rejected", "waiting", "blocked", "closed"];
+const REQUIRED_ROLES = ["open", "accepted", "rejected"];
+const FIELD_TYPES = ["text", "text_body", "list"];
+/** Field ids stored as top-level node keys, with the field types each may use. */
+const NODE_FIELD_KEYS = { body: ["text", "text_body"], pros: ["list"], cons: ["list"], rationale: ["text", "text_body"], assignee: ["text", "text_body"] };
+const LOCKS = ["children", "subtree"];
+const DEFAULT_MODE = "default";
+const MAX_EXTENDS_DEPTH = 8;
+const CONFIG_MAP_KEYS = ["fields", "link_types", "statuses", "comments", "review"];
+const CONFIG_LIST_KEYS = ["kinds", "labels"];
+const LEGACY_ROLES = { open: "open", exploring: "open", "needs-input": "waiting", blocked: "blocked", decided: "accepted",
+  chosen: "accepted", rejected: "rejected", deferred: "closed", done: "closed" };
+/** Config of trees that have none (created before modes had config): today's fixed fields, statuses and kinds. */
+const LEGACY_CONFIG = {
+  fields: {
+    body: { name: "Details", type: "text_body" },
+    pros: { name: "Pros", type: "list" },
+    cons: { name: "Cons", type: "list" },
+    rationale: { name: "Rationale / answer", type: "text_body" },
+    assignee: { name: "Assignee", type: "text" },
+  },
+  link_types: Object.fromEntries(LINK_TYPES.map((t) => [t, { name: t }])),
+  statuses: Object.fromEntries(STATUSES.map((s) => [s, { name: s, role: LEGACY_ROLES[s] }])),
+  comments: { threads: true },
+  review: { required_kinds: ["why", "what", "how", "where"] },
+  kinds: [...KINDS],
+  labels: [],
+};
 const LOCK_TIMEOUT_MS = 10000;
 const STALE_LOCK_MS = 30000;
 const SCAN_SKIP = new Set(["node_modules", ".git", "venv", ".venv", "__pycache__", "dist", "build", "target"]);
@@ -226,7 +253,11 @@ class Store {
         nodes: {},
         activity: [],
       };
-      if (template) tree.template = template.name;
+      if (template) {
+        tree.template = template.name;
+        tree.mode = template.name;
+        tree.config = clone(template.config);
+      }
       const root = addNode(tree, { parent: null, type: "goal", title, body: description, author });
       tree.root_id = root.id;
       if (template) applyTemplate(tree, template, author);
@@ -308,14 +339,102 @@ function descendants(tree, nid) {
   return out;
 }
 
-function addNode(tree, { parent, type = "question", title, body = "", kind = null, status = "open", author = null,
-  pros = null, cons = null, assignee = "" }) {
+const clone = (v) => JSON.parse(JSON.stringify(v));
+const treeConfig = (tree) => tree.config || LEGACY_CONFIG;
+const statusesWithRole = (cfg, role) => Object.keys(cfg.statuses).filter((s) => cfg.statuses[s].role === role);
+const roleOf = (cfg, status) => (hasOwn(cfg.statuses, status) ? cfg.statuses[status].role : null);
+const initialStatus = (cfg) => statusesWithRole(cfg, "open")[0];
+const isEmptyValue = (v) => v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length);
+
+function checkKind(cfg, kind) {
+  if (!cfg.kinds.length) throw new DTError(`invalid kind ${JSON.stringify(kind)}: this tree's mode defines no kinds`);
+  return choice(kind, cfg.kinds, "kind");
+}
+
+function checkField(cfg, id, value) {
+  if (!isEmptyValue(value) && !hasOwn(cfg.fields, id)) {
+    throw new DTError(`field ${JSON.stringify(id)} is not defined in this tree's mode (fields: ${Object.keys(cfg.fields).join(", ") || "none"})`);
+  }
+}
+
+function checkLabels(cfg, labels) {
+  const out = [...new Set(asList(labels))];
+  for (const l of out) {
+    if (!cfg.labels.includes(l)) {
+      throw new DTError(`invalid label ${JSON.stringify(l)}; ${cfg.labels.length ? `expected one of: ${cfg.labels.join(", ")}` : "this tree's mode defines no labels"}`);
+    }
+  }
+  return out;
+}
+
+/** Normalizes {id: value} for custom (non-node-key) fields; empty values become null (= remove). */
+function checkCustomFields(cfg, fields) {
+  if (fields === undefined || fields === null) return {};
+  if (!isPlainObject(fields)) throw new DTError('"fields" must be an object of field id -> value');
+  const out = {};
+  for (const [id, value] of Object.entries(fields)) {
+    const def = hasOwn(cfg.fields, id) ? cfg.fields[id] : null;
+    if (!def) checkField(cfg, id, "x");
+    let v = def.type === "list" ? asList(value) : value === null || value === undefined ? "" : String(value);
+    if (def.type !== "list" && typeof value === "object" && value !== null) throw new DTError(`field ${JSON.stringify(id)} must be text`);
+    if (def.type === "text") v = v.trim();
+    Object.defineProperty(out, id, { value: isEmptyValue(v) ? null : v, enumerable: true, writable: true, configurable: true });
+  }
+  return out;
+}
+
+/** The node whose lock forbids adding, moving or deleting children of `pid`, if any. */
+function lockingNode(tree, pid) {
+  const seen = new Set();
+  let n = tree.nodes[pid];
+  let first = true;
+  while (n && !seen.has(n.id)) {
+    seen.add(n.id);
+    if (n.lock === "subtree" || (first && n.lock === "children")) return n;
+    first = false;
+    n = n.parent ? tree.nodes[n.parent] : null;
+  }
+  return null;
+}
+
+function assertUnlocked(tree, pid, what) {
+  const by = lockingNode(tree, pid);
+  if (!by) return;
+  const scope = by.lock === "children" ? "its direct children" : "anything beneath it";
+  throw new DTError(`cannot ${what}: ${by.id} is locked (${by.lock}), so nodes cannot be added, moved or deleted in ${scope}`);
+}
+
+function setLock(tree, nid, lock, author) {
+  const node = getNode(tree, nid);
+  const value = lock === null || lock === "" || lock === "none" || lock === false ? null : choice(lock, LOCKS, "lock");
+  if ((node.lock || null) === value) return node;
+  node.history.push({ at: now(), by: author, field: "lock", from: node.lock || null, to: value });
+  if (value) node.lock = value;
+  else delete node.lock;
+  node.updated_at = now();
+  log(tree, author, value ? "lock" : "unlock", nid, value || "");
+  return node;
+}
+
+function addNode(tree, { parent, type = "question", title, body = "", kind = null, status = null, author = null,
+  pros = null, cons = null, assignee = "", labels = null, fields = null }) {
+  const cfg = treeConfig(tree);
   choice(type, Object.keys(NODE_TYPES), "node type");
-  choice(status, STATUSES, "status");
-  if (kind) choice(kind, KINDS, "kind");
-  if (parent !== null && parent !== undefined) getNode(tree, parent);
-  else if (Object.keys(tree.nodes).length) {
+  status = status || initialStatus(cfg);
+  choice(status, Object.keys(cfg.statuses), "status");
+  if (kind) checkKind(cfg, kind);
+  if (parent !== null && parent !== undefined) {
+    getNode(tree, parent);
+    for (const [id, v] of Object.entries({ body, pros, cons, assignee })) checkField(cfg, id, v);
+    assertUnlocked(tree, parent, `add a node under ${parent}`);
+  } else if (Object.keys(tree.nodes).length) {
     throw new DTError("a parent node id is required (only the root goal has no parent)");
+  }
+  const nodeLabels = checkLabels(cfg, labels);
+  const custom = {};
+  for (const [id, v] of Object.entries(checkCustomFields(cfg, fields))) {
+    if (hasOwn(NODE_FIELD_KEYS, id)) throw new DTError(`field ${JSON.stringify(id)} is a node key; pass it directly, not in "fields"`);
+    if (v !== null) custom[id] = v;
   }
   if (!title || !String(title).trim()) throw new DTError("title is required");
   const nid = `${NODE_TYPES[type]}${tree.next_id}`;
@@ -341,29 +460,56 @@ function addNode(tree, { parent, type = "question", title, body = "", kind = nul
     created_at: ts,
     updated_at: ts,
   };
+  if (nodeLabels.length) node.labels = nodeLabels;
+  if (Object.keys(custom).length) node.fields = custom;
   tree.nodes[nid] = node;
   log(tree, author, "add", nid, `${type}: ${node.title}`);
   return node;
 }
 
-function updateNode(tree, nid, fields, author) {
+/** Applies field changes; values that differ from the node are validated against the tree's config. */
+function updateNode(tree, nid, fields, author, { anyField = false } = {}) {
   const node = getNode(tree, nid);
+  const cfg = treeConfig(tree);
   const changed = [];
-  for (let [key, value] of Object.entries(fields)) {
-    if (value === undefined || value === null) continue;
+  const entries = Object.entries(fields);
+  if (isPlainObject(fields.fields)) {
+    for (const [id, v] of Object.entries(fields.fields)) if (hasOwn(NODE_FIELD_KEYS, id)) entries.push([id, v]);
+  }
+  for (let [key, value] of entries) {
+    if (value === undefined || (value === null && key !== "lock")) continue;
     if (!EDITABLE_NODE_FIELDS.includes(key)) throw new DTError(`field ${JSON.stringify(key)} is not editable`);
-    if (key === "status") choice(value, STATUSES, "status");
-    else if (key === "kind") {
-      value = value || null;
-      if (value) choice(value, KINDS, "kind");
-    } else if (key === "type") choice(value, Object.keys(NODE_TYPES), "node type");
-    else if (key === "pros" || key === "cons") value = asList(value);
-    else if (key === "title" && !String(value).trim()) throw new DTError("title cannot be empty");
-    if (!same(node[key], value)) {
-      node.history.push({ at: now(), by: author, field: key, from: node[key] ?? null, to: value });
-      node[key] = value;
-      changed.push(key);
+    if (key === "lock") {
+      setLock(tree, nid, value, author);
+      continue;
     }
+    if (key === "fields") {
+      const custom = Object.fromEntries(Object.entries(value || {}).filter(([id]) => !hasOwn(NODE_FIELD_KEYS, id)));
+      for (const [id, v] of Object.entries(checkCustomFields(cfg, custom))) {
+        const cur = (node.fields && hasOwn(node.fields, id) ? node.fields[id] : null);
+        if (same(cur, v)) continue;
+        node.history.push({ at: now(), by: author, field: `fields.${id}`, from: cur, to: v });
+        if (v === null) delete node.fields[id];
+        else node.fields = Object.assign(node.fields || {}, { [id]: v });
+        if (node.fields && !Object.keys(node.fields).length) delete node.fields;
+        changed.push(`fields.${id}`);
+      }
+      continue;
+    }
+    if (key === "kind") value = value || null;
+    else if (key === "type") choice(value, Object.keys(NODE_TYPES), "node type");
+    else if (key === "pros" || key === "cons" || key === "labels") value = asList(value);
+    else if (key === "title" && !String(value).trim()) throw new DTError("title cannot be empty");
+    const cur = key === "labels" ? node.labels || [] : node[key];
+    if (same(cur, value)) continue;
+    if (key === "status") choice(value, Object.keys(cfg.statuses), "status");
+    else if (key === "kind" && value) checkKind(cfg, value);
+    else if (key === "labels") value = checkLabels(cfg, value);
+    else if (hasOwn(NODE_FIELD_KEYS, key) && !anyField) checkField(cfg, key, value);
+    node.history.push({ at: now(), by: author, field: key, from: cur ?? null, to: value });
+    if (key === "labels" && !value.length) delete node.labels;
+    else node[key] = value;
+    changed.push(key);
   }
   if (changed.length) {
     node.updated_at = now();
@@ -378,6 +524,9 @@ function moveNode(tree, nid, newParent, author) {
   getNode(tree, newParent);
   if (nid === tree.root_id) throw new DTError("cannot move the root goal");
   if (descendants(tree, nid).includes(newParent)) throw new DTError("cannot move a node under its own descendant");
+  if (node.parent === newParent) return node;
+  assertUnlocked(tree, node.parent, `move ${nid}`);
+  assertUnlocked(tree, newParent, `move ${nid} under ${newParent}`);
   node.parent = newParent;
   node.updated_at = now();
   log(tree, author, "move", nid, `under ${newParent}`);
@@ -388,6 +537,7 @@ function deleteNode(tree, nid, author) {
   getNode(tree, nid);
   if (nid === tree.root_id) throw new DTError("cannot delete the root goal; delete the tree file instead");
   const removed = new Set(descendants(tree, nid));
+  for (const rid of removed) assertUnlocked(tree, tree.nodes[rid].parent, `delete ${nid}`);
   for (const rid of removed) delete tree.nodes[rid];
   for (const node of Object.values(tree.nodes)) {
     node.links = node.links.filter((lk) => !removed.has(lk.target));
@@ -400,18 +550,21 @@ function deleteNode(tree, nid, author) {
 function chooseOption(tree, oid, rationale, author, rejectSiblings = true) {
   const option = getNode(tree, oid);
   if (option.type !== "option") throw new DTError(`${oid} is a ${option.type}, not an option`);
-  updateNode(tree, oid, { status: "chosen", rationale: rationale || option.rationale || "" }, author);
+  const cfg = treeConfig(tree);
+  const accepted = statusesWithRole(cfg, "accepted");
+  const rejected = statusesWithRole(cfg, "rejected")[0];
+  updateNode(tree, oid, { status: accepted[accepted.length - 1], rationale: rationale || option.rationale || "" }, author, { anyField: true });
   const parent = option.parent ? tree.nodes[option.parent] : undefined;
   if (rejectSiblings && parent) {
     for (const sib of children(tree, parent.id)) {
-      if (sib.type === "option" && sib.id !== oid && !["rejected", "deferred"].includes(sib.status)) {
-        updateNode(tree, sib.id, { status: "rejected" }, author);
+      if (sib.type === "option" && sib.id !== oid && !["rejected", "closed"].includes(roleOf(cfg, sib.status))) {
+        updateNode(tree, sib.id, { status: rejected }, author);
       }
     }
   }
   if (parent) {
     parent.chosen = oid;
-    updateNode(tree, parent.id, { status: "decided" }, author);
+    updateNode(tree, parent.id, { status: accepted[0] }, author);
   }
   log(tree, author, "choose", oid, rationale || "");
   return option;
@@ -420,6 +573,9 @@ function chooseOption(tree, oid, rationale, author, rejectSiblings = true) {
 function addComment(tree, nid, text, author, replyTo = null) {
   const node = getNode(tree, nid);
   if (!text || !String(text).trim()) throw new DTError("comment text is required");
+  if (replyTo && !treeConfig(tree).comments.threads) {
+    throw new DTError("this tree's mode has flat comments (comments.threads: false); replies are disabled");
+  }
   if (replyTo && !node.comments.some((c) => c.id === replyTo)) {
     throw new DTError(`comment ${JSON.stringify(replyTo)} not found on ${nid}`);
   }
@@ -451,7 +607,9 @@ function resolveComment(tree, nid, cid, resolved, author) {
 function addLink(tree, src, dst, type, author) {
   const node = getNode(tree, src);
   getNode(tree, dst);
-  choice(type, LINK_TYPES, "link type");
+  const types = Object.keys(treeConfig(tree).link_types);
+  if (!types.length) throw new DTError("this tree's mode defines no link types");
+  type = choice(type || types[0], types, "link type");
   if (src === dst) throw new DTError("cannot link a node to itself");
   const link = { target: dst, type };
   if (!node.links.some((lk) => same(lk, link))) {
@@ -513,8 +671,8 @@ function inbox(tree, audience) {
         items.push({ node: node.id, title: node.title, kind: "comment", thread: msgs[0].id, last });
       }
     }
-    if (audience === "human" && node.status === "needs-input") {
-      items.push({ node: node.id, title: node.title, kind: "needs-input" });
+    if (audience === "human" && roleOf(treeConfig(tree), node.status) === "waiting") {
+      items.push({ node: node.id, title: node.title, kind: "needs-input", status: node.status });
     }
   }
   return items;
@@ -523,32 +681,35 @@ function inbox(tree, audience) {
 /** Gaps an agent should address to make the tree rigorous. */
 function review(tree) {
   const issues = [];
+  const cfg = treeConfig(tree);
+  const role = (n) => roleOf(cfg, n.status);
   const nodes = Object.values(tree.nodes);
   const root = tree.nodes[tree.root_id];
   if (root) {
     const kinds = new Set(nodes.filter((n) => n.type === "question").map((n) => n.kind));
-    const missing = ["why", "what", "how", "where"].filter((k) => !kinds.has(k));
+    const missing = cfg.review.required_kinds.filter((k) => !kinds.has(k));
     if (missing.length) issues.push([root.id, `no ${missing.join("/")} questions asked yet`]);
   }
   for (const n of nodes) {
     const kids = children(tree, n.id);
     const opts = kids.filter((k) => k.type === "option");
     if (n.type === "question") {
-      if (!["decided", "deferred", "done", "rejected"].includes(n.status) && opts.length < 2) {
+      if (!["accepted", "closed", "rejected"].includes(role(n)) && opts.length < 2) {
         issues.push([n.id, `open question has ${opts.length} option(s); propose at least 2`]);
       }
-      if (n.status === "decided" && !n.chosen && !opts.some((o) => o.status === "chosen")) {
-        issues.push([n.id, "marked decided but no option is chosen"]);
+      if (role(n) === "accepted" && !n.chosen && !opts.some((o) => role(o) === "accepted")) {
+        issues.push([n.id, `marked ${n.status} but no option is chosen`]);
       }
     }
-    if (n.type === "option" && !["rejected", "deferred"].includes(n.status)) {
-      if (!n.pros.length || !n.cons.length) issues.push([n.id, "option lacks pros and/or cons"]);
-      if (n.status === "chosen" && !n.rationale) issues.push([n.id, "chosen option has no rationale"]);
-      if (n.status === "chosen" && !kids.some((k) => k.type === "question")) {
+    if (n.type === "option" && !["rejected", "closed"].includes(role(n))) {
+      const prosCons = ["pros", "cons"].filter((k) => hasOwn(cfg.fields, k));
+      if (prosCons.some((k) => !n[k].length)) issues.push([n.id, `option lacks ${prosCons.join(" and/or ")}`]);
+      if (role(n) === "accepted" && hasOwn(cfg.fields, "rationale") && !n.rationale) issues.push([n.id, "chosen option has no rationale"]);
+      if (role(n) === "accepted" && !kids.some((k) => k.type === "question")) {
         issues.push([n.id, "chosen option has no follow-up questions (how/where/what next?)"]);
       }
     }
-    if (n.type === "question" && n.status === "blocked" && !n.links.length) {
+    if (n.type === "question" && role(n) === "blocked" && !n.links.length) {
       issues.push([n.id, "blocked but no depends-on/blocks link explains why"]);
     }
   }
@@ -560,20 +721,22 @@ function review(tree) {
 
 function summarize(tree) {
   const nodes = Object.values(tree.nodes);
+  const cfg = treeConfig(tree);
   const byStatus = {};
   for (const n of nodes) byStatus[n.status] = (byStatus[n.status] || 0) + 1;
-  const openQ = nodes.filter((n) => n.type === "question" && !CLOSED_STATUSES.has(n.status)).length;
+  const openQ = nodes.filter((n) => n.type === "question" && ["open", "waiting", "blocked"].includes(roleOf(cfg, n.status))).length;
   const unresolved = nodes.reduce((acc, n) => acc + threads(n).filter((t) => !t[0].resolved).length, 0);
   return {
     id: tree.id,
     title: tree.title ?? tree.id,
     status: tree.status ?? "draft",
     template: tree.template ?? null,
+    mode: tree.mode ?? null,
     revision: tree.revision ?? 0,
     updated_at: tree.updated_at ?? null,
     node_count: nodes.length,
     open_questions: openQ,
-    needs_input: byStatus["needs-input"] || 0,
+    needs_input: nodes.filter((n) => roleOf(cfg, n.status) === "waiting").length,
     unresolved_threads: unresolved,
     by_status: byStatus,
     waiting_on_agent: inbox(tree, "agent").length,
@@ -592,6 +755,8 @@ function renderText(tree, showBody = false) {
     }
     if (n.links.length) marks.push(n.links.map((lk) => `${lk.type} ${lk.target}`).join(", "));
     if (n.assignee) marks.push(`@${n.assignee}`);
+    if (n.labels && n.labels.length) marks.push(n.labels.map((l) => `#${l}`).join(" "));
+    if (n.lock) marks.push(`locked: ${n.lock}`);
     const tail = marks.length ? `  <${marks.join("; ")}>` : "";
     return `[${n.id}] ${n.type} ${kind}${n.title}  (${n.status})${tail}`;
   };
@@ -601,7 +766,8 @@ function renderText(tree, showBody = false) {
     lines.push(prefix + connector + label(n));
     const childPrefix = top ? prefix : prefix + (last ? "    " : "│   ");
     if (showBody) {
-      const texts = [...(n.body ? [n.body] : []), ...(n.rationale ? [`rationale: ${n.rationale}`] : [])];
+      const custom = Object.entries(n.fields || {}).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join("; ") : v}`);
+      const texts = [...(n.body ? [n.body] : []), ...(n.rationale ? [`rationale: ${n.rationale}`] : []), ...custom];
       for (const text of texts) for (const line of text.split(/\r?\n/)) lines.push(`${childPrefix}  │ ${line}`);
     }
     const kids = children(tree, nid);
@@ -618,6 +784,10 @@ const meta = () => ({
   statuses: STATUSES,
   tree_statuses: TREE_STATUSES,
   link_types: LINK_TYPES,
+  roles: ROLES,
+  locks: LOCKS,
+  field_types: FIELD_TYPES,
+  legacy_config: LEGACY_CONFIG,
 });
 
 function renderStaticHtml(payload) {
