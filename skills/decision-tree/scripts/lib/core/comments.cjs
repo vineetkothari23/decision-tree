@@ -4,10 +4,14 @@
 
 const { DTError, now } = require("../util.cjs");
 const { getNode, log } = require("./tree.cjs");
+const { treeConfig } = require("../config/legacy.cjs");
 
 function addComment(tree, nid, text, author, replyTo = null) {
   const node = getNode(tree, nid);
   if (!text || !String(text).trim()) throw new DTError("comment text is required");
+  if (replyTo && !treeConfig(tree).comments.threads) {
+    throw new DTError("this tree's mode has flat comments (comments.threads: false); add a new comment instead of a reply");
+  }
   if (replyTo && !node.comments.some((c) => c.id === replyTo)) {
     throw new DTError(`comment ${JSON.stringify(replyTo)} not found on ${nid}`);
   }

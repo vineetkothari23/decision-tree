@@ -579,9 +579,10 @@ test("built-in templates shipped with the skill parse and validate", () => {
   const dir = dt.builtinTemplatesDir();
   const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => /\.(ya?ml|json)$/.test(f)) : [];
   for (const f of files) {
-    const tpl = dt.loadTemplate(path.join(dir, f), "builtin");
-    assert.ok(tpl.nodes.length > 0, f);
+    const loaded = dt.loadTemplate(path.join(dir, f), "builtin");
+    assert.ok(loaded.nodes.length > 0 || loaded.config, f);
     const store = new dt.Store(tmpdir());
+    const tpl = dt.resolveTemplate(store, loaded.name, { allowPath: false });
     const tree = store.createTree("t", "T", "", AGENT, tpl);
     assert.equal(tree.template, tpl.name);
   }

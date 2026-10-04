@@ -8,6 +8,9 @@ const { Store } = require("./store/store.cjs");
 const { findProjectRoot, scanProjects } = require("./store/projects.cjs");
 const tree = require("./core/tree.cjs");
 const comments = require("./core/comments.cjs");
+const { chooseOption } = require("./core/choose.cjs");
+const { LEGACY_CONFIG, treeConfig } = require("./config/legacy.cjs");
+const { DraftStore } = require("./store/drafts.cjs");
 const { inbox } = require("./review/inbox.cjs");
 const { review } = require("./review/checks.cjs");
 const { summarize } = require("./review/summary.cjs");
@@ -15,7 +18,9 @@ const { renderText, renderTemplate } = require("./render/text.cjs");
 const { renderStaticHtml, snapshotPayload } = require("./render/static.cjs");
 const { parseYaml, stringifyYaml } = require("./yaml.cjs");
 const { validateTemplate } = require("./templates/schema.cjs");
-const { loadTemplate, resolveTemplate, listTemplates, templateDirs } = require("./templates/lookup.cjs");
+const { loadTemplate, listTemplates, templateDirs } = require("./templates/lookup.cjs");
+const { resolveTemplate } = require("./templates/resolve.cjs");
+const { openDraft, setDraftConfig, saveDraft } = require("./templates/drafts.cjs");
 const { applyTemplate } = require("./templates/apply.cjs");
 const { treeToTemplate, exportTemplate } = require("./templates/export.cjs");
 const { createMode, saveTreeAsMode, removeMode } = require("./templates/modes.cjs");
@@ -36,12 +41,14 @@ module.exports = {
   TREE_STATUSES: constants.TREE_STATUSES,
   LINK_TYPES: constants.LINK_TYPES,
   AUTHOR_TYPES: constants.AUTHOR_TYPES,
-  DTError, Store, App, findProjectRoot, scanProjects, slugify, validateSlug,
+  LEGACY_CONFIG, treeConfig,
+  DTError, Store, DraftStore, App, findProjectRoot, scanProjects, slugify, validateSlug,
   addNode: tree.addNode,
   updateNode: tree.updateNode,
   moveNode: tree.moveNode,
   deleteNode: tree.deleteNode,
-  chooseOption: tree.chooseOption,
+  lockNode: tree.lockNode,
+  chooseOption,
   addLink: tree.addLink,
   removeLink: tree.removeLink,
   updateTreeMeta: tree.updateTreeMeta,
@@ -53,5 +60,6 @@ module.exports = {
   createServer, installSkill, parseCli, main,
   parseYaml, stringifyYaml, validateTemplate, loadTemplate, resolveTemplate, listTemplates, templateDirs,
   applyTemplate, treeToTemplate, exportTemplate, renderTemplate, createMode, saveTreeAsMode, removeMode,
+  openDraft, setDraftConfig, saveDraft,
   builtinTemplatesDir, userTemplatesDir,
 };

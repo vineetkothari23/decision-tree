@@ -10,11 +10,15 @@ const { DTError, isFile, isPlainObject, same } = require("../util.cjs");
 const { parseYaml, stringifyYaml } = require("../yaml.cjs");
 const { validateTemplate, validateTemplateName, countTemplateNodes } = require("./schema.cjs");
 const { readTemplateFile, templateFiles, listTemplates } = require("./lookup.cjs");
+const { withConfig, treeParent } = require("./resolve.cjs");
 const { treeToTemplate } = require("./export.cjs");
 
 function modeDir(store, user) {
   return user ? { source: "user", dir: userTemplatesDir() } : { source: "project", dir: path.join(store.dir, TEMPLATES_DIR) };
 }
+
+/** Validates template data as it would be saved at `dest`, including its inheritance chain. */
+const validateMode = (store, data, { label, name, dest }) => withConfig(store, { ...validateTemplate(data, { label, name }), path: dest });
 
 /** Validates a YAML/JSON template file and saves it as `<name>.yaml` in the project (or user) template dir. */
 function createMode(store, name, file, { user = false, force = false } = {}) {
@@ -24,7 +28,8 @@ function createMode(store, name, file, { user = false, force = false } = {}) {
   const data = readTemplateFile(src);
   if (isPlainObject(data)) data.name = name;
   const label = `${JSON.stringify(name)} (${src})`;
-  validateTemplate(data, { label, name });
+  const dest = path.join(modeDir(store, user).dir, `${name}.yaml`);
+  validateMode(store, data, { label, name, dest });
   let text = null;
   if (!/\.json$/i.test(src)) {
     const raw = fs.readFileSync(src, "utf8").replace(/^\uFEFF/, "");
@@ -36,14 +41,18 @@ function createMode(store, name, file, { user = false, force = false } = {}) {
     }
   }
   if (text === null) text = stringifyYaml(data);
-  validateTemplate(parseYaml(text, src), { label, name });
+  validateMode(store, parseYaml(text, src), { label, name, dest });
   return writeMode(store, name, text, { user, force });
 }
 
 /** Saves a tree's structure (see treeToTemplate) as the project mode `<name>`. */
-function saveTreeAsMode(store, tree, name, { force = false } = {}) {
-  const text = stringifyYaml(treeToTemplate(tree, name));
-  const tpl = validateTemplate(parseYaml(text, `${name}.yaml`), { label: JSON.stringify(name), name });
+function saveTreeAsMode(store, tree, name, { force = false, keepStatus = false } = {}) {
+  validateTemplateName(name);
+  const { dir } = modeDir(store, false);
+  const parent = treeParent(store, tree, name, dir);
+  const text = stringifyYaml(treeToTemplate(tree, name, { parent, keepStatus }));
+  const dest = path.join(dir, `${name}.yaml`);
+  const tpl = validateMode(store, parseYaml(text, dest), { label: JSON.stringify(name), name, dest });
   return { ...writeMode(store, name, text, { force }), nodes: countTemplateNodes(tpl.nodes) };
 }
 

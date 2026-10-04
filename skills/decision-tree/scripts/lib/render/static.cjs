@@ -3,7 +3,7 @@
 /** Self-contained read-only HTML snapshots. */
 
 const fs = require("node:fs");
-const { meta } = require("../constants.cjs");
+const { meta } = require("../config/meta.cjs");
 const { VIEWER_HTML } = require("../paths.cjs");
 const { now } = require("../util.cjs");
 const { summarize } = require("../review/summary.cjs");

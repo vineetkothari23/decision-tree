@@ -1,15 +1,28 @@
 "use strict";
 
-/** Template validation and normalization. */
+/**
+ * Template validation and normalization. Structure is checked here; vocabulary (statuses, kinds, fields, labels)
+ * is checked against a config by `checkNodes`: the legacy one for templates without `extends`/`config`, or the
+ * inherited one once templates/resolve has resolved it.
+ */
 
-const { NODE_TYPES, KINDS, STATUSES, TREE_STATUSES, TEMPLATE_VERSION, TEMPLATE_NAME_RE, TEMPLATE_KEYS, TEMPLATE_NODE_KEYS } = require("../constants.cjs");
-const { DTError, isPlainObject } = require("../util.cjs");
+const { NODE_TYPES, TREE_STATUSES, TEMPLATE_VERSION, TEMPLATE_NAME_RE, TEMPLATE_KEYS, TEMPLATE_NODE_KEYS } = require("../constants.cjs");
+const { DTError, isPlainObject, hasOwn } = require("../util.cjs");
+const { LEGACY_CONFIG } = require("../config/legacy.cjs");
+const { initialStatus } = require("../config/roles.cjs");
+const { parseConfig, BUILTIN_FIELDS } = require("../config/sections.cjs");
+const { LOCKS } = require("../core/policy/locks.cjs");
+
+const templateFail = (label) => (where, msg) => {
+  throw new DTError(`template ${label}: ${where ? `${where}: ` : ""}${msg}`);
+};
+
+/** True for templates that opt into modes (`extends` or `config`); others keep the legacy vocabulary. */
+const isConfigured = (tpl) => tpl.extends !== null || tpl.config !== null;
 
 /** Validates parsed template data and returns it normalized (defaults filled in). */
 function validateTemplate(data, { label, name = null }) {
-  const fail = (where, msg) => {
-    throw new DTError(`template ${label}: ${where ? `${where}: ` : ""}${msg}`);
-  };
+  const fail = templateFail(label);
   const text = (v, where, key) => {
     if (v === undefined || v === null) return "";
     if (typeof v === "string") return v;
@@ -35,6 +48,11 @@ function validateTemplate(data, { label, name = null }) {
   if (treeStatus !== null && !TREE_STATUSES.includes(treeStatus)) {
     fail("tree_status", `invalid tree status ${JSON.stringify(treeStatus)}; expected one of: ${TREE_STATUSES.join(", ")}`);
   }
+  const parent = data.extends ?? null;
+  if (parent !== null && (typeof parent !== "string" || !TEMPLATE_NAME_RE.test(parent))) {
+    fail("extends", `must be the name of another mode, got ${JSON.stringify(parent)}`);
+  }
+  const config = hasOwn(data, "config") ? parseConfig(data.config, fail) : null;
   const list = (v, where) => {
     if (v === undefined || v === null) return [];
     if (!Array.isArray(v)) fail(where, "must be a list");
@@ -43,6 +61,11 @@ function validateTemplate(data, { label, name = null }) {
   const strings = (v, where, key) => {
     const items = typeof v === "string" ? [v] : list(v, where ? `${where}.${key}` : key);
     return items.map((x, k) => text(x, `${where}.${key}[${k}]`, key).trim()).filter(Boolean);
+  };
+  const id = (v, where, key) => {
+    if (v === undefined || v === null) return null;
+    if (typeof v !== "string" || !v) fail(where, `${JSON.stringify(key)} must be a string`);
+    return v;
   };
   const node = (raw, where) => {
     if (!isPlainObject(raw)) fail(where, "must be a mapping with at least a title");
@@ -56,40 +79,90 @@ function validateTemplate(data, { label, name = null }) {
     if (!Object.keys(NODE_TYPES).includes(type)) {
       fail(where, `invalid type ${JSON.stringify(type)}; expected one of: question, option, decision, task, note`);
     }
-    const kind = raw.kind ?? null;
-    if (kind !== null) {
-      if (type !== "question") fail(where, `"kind" is only allowed on questions (this node is a ${type})`);
-      if (!KINDS.includes(kind)) fail(where, `invalid kind ${JSON.stringify(kind)}; expected one of: ${KINDS.join(", ")}`);
-    }
-    const status = raw.status ?? "open";
-    if (!STATUSES.includes(status)) fail(where, `invalid status ${JSON.stringify(status)}; expected one of: ${STATUSES.join(", ")}`);
+    const kind = id(raw.kind, where, "kind");
+    if (kind !== null && type !== "question") fail(where, `"kind" is only allowed on questions (this node is a ${type})`);
     for (const key of ["pros", "cons"]) {
       if (raw[key] !== undefined && raw[key] !== null && type !== "option") {
         fail(where, `${JSON.stringify(key)} is only allowed on options (this node is a ${type})`);
       }
     }
-    return {
+    const out = {
       title: nodeTitle,
       type,
       kind,
       body: text(raw.body, where, "body").replace(/\n+$/, ""),
-      status,
+      status: id(raw.status, where, "status"),
       assignee: text(raw.assignee, where, "assignee").trim(),
       pros: strings(raw.pros, where, "pros"),
       cons: strings(raw.cons, where, "cons"),
-      children: list(raw.children, `${where}.children`).map((c, k) => node(c, `${where}.children[${k}]`)),
     };
+    const rationale = text(raw.rationale, where, "rationale").replace(/\n+$/, "");
+    if (rationale) out.rationale = rationale;
+    const labels = strings(raw.labels, where, "labels");
+    if (labels.length) out.labels = labels;
+    if (raw.lock !== undefined && raw.lock !== null) {
+      if (!LOCKS.includes(raw.lock)) fail(where, `invalid lock ${JSON.stringify(raw.lock)}; expected one of: ${LOCKS.join(", ")}`);
+      out.lock = raw.lock;
+    }
+    if (raw.fields !== undefined && raw.fields !== null) {
+      if (!isPlainObject(raw.fields)) fail(where, '"fields" must be a mapping of field id to value');
+      const fields = {};
+      for (const [fid, v] of Object.entries(raw.fields)) {
+        if (hasOwn(BUILTIN_FIELDS, fid)) fail(`${where}.fields`, `${JSON.stringify(fid)} is a built-in field; set it on the node itself`);
+        const value = Array.isArray(v) ? strings(v, `${where}.fields`, fid) : text(v, `${where}.fields`, fid).replace(/\n+$/, "");
+        if (value.length) fields[fid] = value;
+      }
+      if (Object.keys(fields).length) out.fields = fields;
+    }
+    out.children = list(raw.children, `${where}.children`).map((c, k) => node(c, `${where}.children[${k}]`));
+    return out;
   };
   const nodes = list(data.nodes, "nodes");
-  if (!nodes.length) fail("nodes", "must be a non-empty list of nodes to add under the root goal");
-  return {
+  const tpl = {
     template: TEMPLATE_VERSION,
     name: data.name,
     title,
     description: text(data.description, "description", "description").replace(/\n+$/, ""),
+    extends: parent,
     tree_status: treeStatus,
+    config,
     nodes: nodes.map((n, k) => node(n, `nodes[${k}]`)),
   };
+  if (!isConfigured(tpl)) {
+    if (!nodes.length) fail("nodes", "must be a non-empty list of nodes to add under the root goal (or give the mode `extends:`/`config:`)");
+    checkNodes(tpl.nodes, LEGACY_CONFIG, fail);
+  }
+  return tpl;
+}
+
+/** Checks template nodes against a resolved config and fills in each node's default status. */
+function checkNodes(nodes, cfg, fail) {
+  const known = (value, allowed, what, where) => {
+    if (!allowed.includes(value)) {
+      fail(where, allowed.length
+        ? `invalid ${what} ${JSON.stringify(value)}; expected one of: ${allowed.join(", ")}`
+        : `invalid ${what} ${JSON.stringify(value)}: this mode defines no ${what}s`);
+    }
+  };
+  const walk = (list, prefix) => list.forEach((n, k) => {
+    const where = `${prefix}[${k}]`;
+    if (n.kind !== null) known(n.kind, cfg.kinds, "kind", where);
+    n.status = n.status ?? initialStatus(cfg);
+    known(n.status, Object.keys(cfg.statuses), "status", where);
+    for (const l of n.labels || []) known(l, cfg.labels, "label", where);
+    for (const f of ["body", "assignee", "pros", "cons", "rationale"]) {
+      if (n[f] && n[f].length && !hasOwn(cfg.fields, f)) fail(where, `field ${JSON.stringify(f)} is not part of this mode`);
+    }
+    for (const [f, v] of Object.entries(n.fields || {})) {
+      if (!hasOwn(cfg.fields, f)) fail(`${where}.fields`, `field ${JSON.stringify(f)} is not part of this mode`);
+      if ((cfg.fields[f].type === "list") !== Array.isArray(v)) {
+        fail(`${where}.fields`, `field ${JSON.stringify(f)} must be ${cfg.fields[f].type === "list" ? "a list" : "text"}`);
+      }
+    }
+    walk(n.children, `${where}.children`);
+  });
+  walk(nodes, "nodes");
+  return nodes;
 }
 
 function validateTemplateName(name) {
@@ -99,7 +172,6 @@ function validateTemplateName(name) {
   return name;
 }
 
-
 const countTemplateNodes = (nodes) => nodes.reduce((acc, n) => acc + 1 + countTemplateNodes(n.children), 0);
 
-module.exports = { validateTemplate, validateTemplateName, countTemplateNodes };
+module.exports = { validateTemplate, validateTemplateName, countTemplateNodes, checkNodes, isConfigured, templateFail };

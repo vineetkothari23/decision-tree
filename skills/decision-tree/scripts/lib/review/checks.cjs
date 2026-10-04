@@ -1,40 +1,48 @@
 "use strict";
 
-/** Rigor checks that `dtree review` reports. */
+/** Rigor checks that `dtree review` reports, driven by the tree's config (status roles, fields, required kinds). */
 
+const { hasOwn } = require("../util.cjs");
 const { children } = require("../core/tree.cjs");
+const { treeConfig } = require("../config/legacy.cjs");
+const { hasRole, isDone, chosenStatus } = require("../config/roles.cjs");
 const { inbox } = require("./inbox.cjs");
 
 /** Gaps an agent should address to make the tree rigorous. */
 function review(tree) {
+  const cfg = treeConfig(tree);
   const issues = [];
   const nodes = Object.values(tree.nodes);
   const root = tree.nodes[tree.root_id];
-  if (root) {
+  const required = cfg.review.required_kinds;
+  if (root && required.length) {
     const kinds = new Set(nodes.filter((n) => n.type === "question").map((n) => n.kind));
-    const missing = ["why", "what", "how", "where"].filter((k) => !kinds.has(k));
+    const missing = required.filter((k) => !kinds.has(k));
     if (missing.length) issues.push([root.id, `no ${missing.join("/")} questions asked yet`]);
   }
+  const weighs = hasOwn(cfg.fields, "pros") && hasOwn(cfg.fields, "cons");
+  const explains = hasOwn(cfg.fields, "rationale");
+  const chosen = chosenStatus(cfg);
   for (const n of nodes) {
     const kids = children(tree, n.id);
     const opts = kids.filter((k) => k.type === "option");
     if (n.type === "question") {
-      if (!["decided", "deferred", "done", "rejected"].includes(n.status) && opts.length < 2) {
+      if (!isDone(cfg, n.status) && opts.length < 2) {
         issues.push([n.id, `open question has ${opts.length} option(s); propose at least 2`]);
       }
-      if (n.status === "decided" && !n.chosen && !opts.some((o) => o.status === "chosen")) {
+      if (hasRole(cfg, n.status, "accepted") && !n.chosen && !opts.some((o) => hasRole(cfg, o.status, "accepted"))) {
         issues.push([n.id, "marked decided but no option is chosen"]);
       }
-    }
-    if (n.type === "option" && !["rejected", "deferred"].includes(n.status)) {
-      if (!n.pros.length || !n.cons.length) issues.push([n.id, "option lacks pros and/or cons"]);
-      if (n.status === "chosen" && !n.rationale) issues.push([n.id, "chosen option has no rationale"]);
-      if (n.status === "chosen" && !kids.some((k) => k.type === "question")) {
-        issues.push([n.id, "chosen option has no follow-up questions (how/where/what next?)"]);
+      if (hasRole(cfg, n.status, "blocked") && !n.links.length) {
+        issues.push([n.id, "blocked but no link explains why"]);
       }
     }
-    if (n.type === "question" && n.status === "blocked" && !n.links.length) {
-      issues.push([n.id, "blocked but no depends-on/blocks link explains why"]);
+    if (n.type === "option" && !hasRole(cfg, n.status, "rejected", "closed")) {
+      if (weighs && (!n.pros.length || !n.cons.length)) issues.push([n.id, "option lacks pros and/or cons"]);
+      if (n.status === chosen && explains && !n.rationale) issues.push([n.id, "chosen option has no rationale"]);
+      if (n.status === chosen && !kids.some((k) => k.type === "question")) {
+        issues.push([n.id, "chosen option has no follow-up questions (how/where/what next?)"]);
+      }
     }
   }
   for (const item of inbox(tree, "agent")) {

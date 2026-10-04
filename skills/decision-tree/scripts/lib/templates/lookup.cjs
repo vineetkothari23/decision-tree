@@ -53,8 +53,8 @@ function templateDirs(store) {
 
 const templateFiles = (dir, name) => TEMPLATE_EXTS.map((ext) => path.join(dir, name + ext)).filter(isFile);
 
-/** Finds a template by file path or name (project > user > built-in). */
-function resolveTemplate(store, arg, { allowPath = true } = {}) {
+/** Finds a template by file path or name (project > user > built-in), without resolving `extends`. */
+function findTemplate(store, arg, { allowPath = true } = {}) {
   if (TEMPLATE_PATH_RE.test(arg)) {
     if (!allowPath) throw new DTError(`template must be a name, not a path: ${JSON.stringify(arg)}`);
     const file = path.resolve(arg);
@@ -88,13 +88,14 @@ function listTemplates(store) {
     for (const name of names) {
       const [file] = templateFiles(dir, name);
       if (!file) continue;
-      const row = { name, title: name, description: "", source, path: file, active: !winners.has(name), shadowed_by: null };
+      const row = { name, title: name, description: "", extends: null, source, path: file, active: !winners.has(name), shadowed_by: null };
       if (!row.active) row.shadowed_by = winners.get(name);
       else winners.set(name, { source, path: file });
       try {
         const tpl = loadTemplate(file, source);
         row.title = tpl.title;
         row.description = tpl.description;
+        row.extends = tpl.extends ?? (tpl.config ? "default" : null);
         row.nodes = countTemplateNodes(tpl.nodes);
       } catch (e) {
         if (!(e instanceof DTError)) throw e;
@@ -106,4 +107,4 @@ function listTemplates(store) {
   return rows.sort((a, b) => a.name.localeCompare(b.name) || Number(b.active) - Number(a.active));
 }
 
-module.exports = { templateNameOf, readTemplateFile, loadTemplate, templateDirs, templateFiles, resolveTemplate, listTemplates };
+module.exports = { templateNameOf, readTemplateFile, loadTemplate, templateDirs, templateFiles, findTemplate, listTemplates };

@@ -9,21 +9,39 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { TOOL_DIR, SCRIPT_NAME, TEMPLATES_DIR, AUTHOR_TYPES } = require("../constants.cjs");
 const { DTError, choice, hasOwn, slugify, validateSlug } = require("../util.cjs");
-const { getNode, addNode, updateNode, moveNode, deleteNode, chooseOption, addLink, removeLink, updateTreeMeta } = require("../core/tree.cjs");
+const { getNode, addNode, updateNode, lockNode, moveNode, deleteNode, addLink, removeLink, updateTreeMeta } = require("../core/tree.cjs");
+const { chooseOption } = require("../core/choose.cjs");
+const { fieldDef, readField, isBuiltinField } = require("../core/policy/fields.cjs");
+const { treeConfig } = require("../config/legacy.cjs");
 const { addComment, resolveComment, threads } = require("../core/comments.cjs");
 const { inbox } = require("../review/inbox.cjs");
 const { review } = require("../review/checks.cjs");
 const { summarize } = require("../review/summary.cjs");
-const { renderText, renderTemplate } = require("../render/text.cjs");
+const { renderText, renderTemplate, renderTreeConfig } = require("../render/text.cjs");
 const { renderStaticHtml, snapshotPayload } = require("../render/static.cjs");
 const { countTemplateNodes } = require("../templates/schema.cjs");
-const { resolveTemplate, listTemplates, templateDirs } = require("../templates/lookup.cjs");
+const { listTemplates, templateDirs } = require("../templates/lookup.cjs");
+const { resolveTemplate, treeParent } = require("../templates/resolve.cjs");
 const { exportTemplate } = require("../templates/export.cjs");
 const { createMode, removeMode } = require("../templates/modes.cjs");
 const { App } = require("../http/app.cjs");
 const { createServer } = require("../http/server.cjs");
 const { UsageError } = require("./args.cjs");
 const { installSkill } = require("./install-skill.cjs");
+
+/** `--field id=value` options as `{id: value}`; repeating a list field's option appends to it. */
+function fieldOptions(tree, specs = []) {
+  const cfg = treeConfig(tree);
+  const out = {};
+  for (const spec of specs) {
+    const at = spec.indexOf("=");
+    if (at < 1) throw new DTError(`--field expects <id>=<value>, got ${JSON.stringify(spec)}`);
+    const id = spec.slice(0, at);
+    const value = spec.slice(at + 1);
+    out[id] = fieldDef(cfg, id).type === "list" ? [...(out[id] || []), ...(value ? [value] : [])] : value;
+  }
+  return out;
+}
 
 function listModes(a, store) {
   const rows = listTemplates(store);
@@ -79,7 +97,8 @@ const STORE_COMMANDS = {
       const tpl = resolveTemplate(store, a.target);
       return [tpl, renderTemplate(tpl)];
     }
-    const res = exportTemplate(store.load(a.target), o.out, o.name);
+    const tree = store.load(a.target);
+    const res = exportTemplate(tree, o.out, o.name, { parentFor: (name, dir) => treeParent(store, tree, name, dir) });
     return [res, `exported ${res.nodes} node(s) as template ${res.name} to ${res.path}\n` +
       `use it: dtree new "<title>" --template ${path.relative(process.cwd(), res.path) || res.path}` +
       ` (or copy it to .decisions/templates/ and use --template ${res.name})`];
@@ -98,17 +117,35 @@ const STORE_COMMANDS = {
     return [res, `removed ${res.source} mode ${res.name} (${res.removed.join(", ")})${note}`];
   },
 
+  config(a, store) {
+    if (a.values.mode) {
+      const tpl = resolveTemplate(store, a.values.mode);
+      return [tpl, renderTemplate(tpl)];
+    }
+    if (!a.tree) throw new UsageError("config needs a tree, or --mode <name>");
+    const tree = store.load(a.tree);
+    return [{ tree: tree.id, mode: tree.config ? tree.template || null : null, config: treeConfig(tree) }, renderTreeConfig(tree)];
+  },
+
   show(a, store) {
     const tree = store.load(a.tree);
     return [tree, renderText(tree, Boolean(a.values.body))];
   },
 
   node(a, store) {
-    const node = getNode(store.load(a.tree), a.node);
+    const tree = store.load(a.tree);
+    const node = getNode(tree, a.node);
     const lines = [`[${node.id}] ${node.type} ${node.kind || ""} (${node.status}) parent=${node.parent}`, node.title];
     if (node.body) lines.push("", node.body);
-    for (const key of ["pros", "cons"]) if (node[key].length) lines.push(`${key}:`, ...node[key].map((x) => `  - ${x}`));
-    if (node.rationale) lines.push(`rationale: ${node.rationale}`);
+    for (const [id, def] of Object.entries(treeConfig(tree).fields)) {
+      const value = readField(node, id);
+      if (id === "body" || value === undefined || !value.length) continue;
+      if (def.type === "list") lines.push(`${id}:`, ...value.map((x) => `  - ${x}`));
+      else lines.push(`${id}: ${value}`);
+    }
+    for (const [id, value] of Object.entries(node.fields || {})) if (!isBuiltinField(id) && !hasOwn(treeConfig(tree).fields, id)) lines.push(`${id}: ${value}`);
+    if (node.labels && node.labels.length) lines.push(`labels: ${node.labels.join(", ")}`);
+    if (node.lock) lines.push(`locked: ${node.lock}`);
     if (node.links.length) lines.push("links: " + node.links.map((lk) => `${lk.type} ${lk.target}`).join(", "));
     for (const msgs of threads(node)) {
       lines.push("");
@@ -127,7 +164,7 @@ const STORE_COMMANDS = {
     const lines = items.map((it) =>
       it.kind === "comment"
         ? `${it.tree} ${it.node} thread ${it.thread} — ${it.last.author} (${it.last.author_type}): ${it.last.text}`
-        : `${it.tree} ${it.node} needs-input — ${it.title}`);
+        : `${it.tree} ${it.node} ${it.status || "needs-input"} — ${it.title}`);
     return [items, lines.join("\n") || `nothing waiting on ${audience}s`];
   },
 
@@ -179,11 +216,14 @@ const TREE_EDITS = {
       title: o.title,
       body: o.body || "",
       kind: o.kind || null,
-      status: o.status || "open",
+      status: o.status || null,
       author,
       pros: o.pro,
       cons: o.con,
       assignee: o.assignee || "",
+      labels: o.label,
+      lock: o.lock || null,
+      fields: fieldOptions(tree, o.field),
     });
     return [res, `added ${res.id}`];
   },
@@ -201,6 +241,8 @@ const TREE_EDITS = {
       cons: o.con,
       rationale: o.rationale,
       assignee: o.assignee,
+      labels: o.label,
+      fields: fieldOptions(tree, o.field),
     }, author);
     return [res, `updated ${res.id}`];
   },
@@ -228,8 +270,18 @@ const TREE_EDITS = {
   },
 
   link(a, tree, author) {
-    const res = addLink(tree, a.src, a.dst, a.values.type || "depends-on", author);
+    const res = addLink(tree, a.src, a.dst, a.values.type || null, author);
     return [res, `linked ${a.src} ${res.type} ${a.dst}`];
+  },
+
+  lock(a, tree, author) {
+    const res = lockNode(tree, a.node, a.values.scope || "children", author);
+    return [res, `locked ${res.id} (${res.lock})`];
+  },
+
+  unlock(a, tree, author) {
+    const res = lockNode(tree, a.node, null, author);
+    return [res, `unlocked ${res.id}`];
   },
 
   unlink(a, tree, author) {

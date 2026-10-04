@@ -1,0 +1,27 @@
+# Built-in base mode. Every mode extends this one unless it says otherwise (`extends:`),
+# and only states what differs. Keep it lean: richer settings belong in the modes that need them.
+template: 1
+name: default
+title: Blank
+description: A blank tree with the basics only.
+config:
+  fields:
+    body:
+      name: Body
+      type: text_body
+  link_types:
+    relates-to:
+      name: Relates to
+  statuses:
+    active:
+      name: Active
+      role: open
+    accepted:
+      name: Accepted
+      role: accepted
+    rejected:
+      name: Rejected
+      role: rejected
+  comments:
+    threads: true
+nodes: []

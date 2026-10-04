@@ -7,8 +7,39 @@ title: Plan a feature
 description: |
   Question-driven plan for a new feature. Answer why/who/what before how/where;
   give every question 2-4 options with pros and cons, choose with a rationale,
-  and mark product calls needs-input instead of guessing.
+  and mark product calls pending instead of guessing.
 tree_status: draft
+extends: default
+config:
+  fields:
+    pros:
+      name: Pros
+      type: list
+    cons:
+      name: Cons
+      type: list
+    rationale:
+      name: Rationale
+      type: text_body
+    assignee:
+      name: Assignee
+      type: text
+  link_types:
+    depends-on:
+      name: Depends on
+    blocks:
+      name: Blocks
+    supersedes:
+      name: Supersedes
+    duplicates:
+      name: Duplicates
+  statuses:
+    pending:
+      name: Pending
+      role: waiting
+  kinds: [why, what, how, where, who, when, risk, other]
+  review:
+    required_kinds: [why, what, how, where]
 nodes:
   - title: Why build this, and why now?
     kind: why
@@ -33,7 +64,7 @@ nodes:
     children:
       - title: What does success look like, and how is it measured?
         kind: what
-        status: needs-input
+        status: pending
         assignee: human
         body: |
           - Propose 1-3 measurable metrics with a baseline and target.
