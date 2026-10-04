@@ -2,7 +2,7 @@
 
 /** Format versions, vocabularies and limits shared across modules. */
 
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 const SCHEMA_VERSION = 1;
 const DECISIONS_DIR = ".decisions";
 const TOOL_DIR = "_tool";
@@ -28,8 +28,11 @@ const TEMPLATE_VERSION = 1;
 const TEMPLATE_NAME_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/;
 const TEMPLATE_EXTS = [".yaml", ".yml", ".json"];
 const TEMPLATES_DIR = "templates";
-const TEMPLATE_KEYS = ["template", "name", "title", "description", "tree_status", "nodes"];
-const TEMPLATE_NODE_KEYS = ["title", "type", "kind", "body", "status", "assignee", "pros", "cons", "children"];
+const DRAFTS_DIR = "_drafts";
+const TEMPLATE_KEYS = ["template", "name", "title", "description", "extends", "tree_status", "config", "nodes"];
+const TEMPLATE_NODE_KEYS = [
+  "title", "type", "kind", "body", "status", "assignee", "pros", "cons", "rationale", "labels", "lock", "fields", "children",
+];
 const TEMPLATE_PATH_RE = /[\\/]|\.(ya?ml|json)$/i;
 
 const meta = () => ({
@@ -44,6 +47,6 @@ module.exports = {
   VERSION, SCHEMA_VERSION, DECISIONS_DIR, TOOL_DIR, SCRIPT_NAME, LIB_DIR_NAME, PACKAGE_NAME,
   NODE_TYPES, KINDS, STATUSES, TREE_STATUSES, LINK_TYPES, AUTHOR_TYPES, EDITABLE_NODE_FIELDS, ACTIVITY_LIMIT, SLUG_RE,
   CLOSED_STATUSES, LOCK_TIMEOUT_MS, STALE_LOCK_MS, SCAN_SKIP,
-  TEMPLATE_VERSION, TEMPLATE_NAME_RE, TEMPLATE_EXTS, TEMPLATES_DIR, TEMPLATE_KEYS, TEMPLATE_NODE_KEYS, TEMPLATE_PATH_RE,
+  TEMPLATE_VERSION, TEMPLATE_NAME_RE, TEMPLATE_EXTS, TEMPLATES_DIR, DRAFTS_DIR, TEMPLATE_KEYS, TEMPLATE_NODE_KEYS, TEMPLATE_PATH_RE,
   meta,
 };

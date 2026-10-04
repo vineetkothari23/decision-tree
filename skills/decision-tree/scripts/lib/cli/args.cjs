@@ -3,7 +3,7 @@
 /** CLI usage text, option specs and argument parsing. */
 
 const { parseArgs } = require("node:util");
-const { VERSION, KINDS, STATUSES, AUTHOR_TYPES } = require("../constants.cjs");
+const { VERSION, AUTHOR_TYPES } = require("../constants.cjs");
 
 const USAGE = `dtree ${VERSION} - question-driven decision trees stored in .decisions/
 
@@ -23,17 +23,23 @@ usage: dtree <command> [options]
                                               validate a template and save it as .decisions/templates/<name>.yaml
                                               (--user: ~/.config/decision-tree/templates/)
   remove-mode <name> [--user]                 delete a project (or --user) template
+  config [<tree>] [--mode name]               a tree's (or mode's) statuses, fields, link types, kinds, labels
   show <tree> [--body]                        print a tree
   node <tree> <node>                          print one node with its comment threads
   add <tree> -p <parent> [-t question|option|decision|task|note] [-k kind] --title T
-      [-b body] [-s status] [--pro P]... [--con C]... [--assignee A]
+      [-b body] [-s status] [--pro P]... [--con C]... [--assignee A] [--label L]... [--field id=V]...
+      [--lock children|subtree]
   update <tree> <node> [--title T] [-b body] [-k kind] [-t type] [-s status] [--pro P]...
-      [--con C]... [-r rationale] [--assignee A] [--parent new-parent]
+      [--con C]... [-r rationale] [--assignee A] [--label L]... [--field id=V]... [--parent new-parent]
+                                              (--label replaces the node's labels; --label "" clears them)
   status <tree> <node> <status>               set node status
   choose <tree> <option> [-r rationale] [--keep-siblings]
   comment <tree> <node> "<text>" [--reply-to cID]
   resolve <tree> <node> <cID> [--reopen]
-  link <tree> <src> <dst> [--type depends-on|blocks|relates-to|supersedes|duplicates]
+  link <tree> <src> <dst> [--type T]          default type: the tree's first link type
+  lock <tree> <node> [--scope children|subtree]
+                                              block adding/moving/deleting direct children (default) or anything below
+  unlock <tree> <node>
   unlink <tree> <src> <dst>
   delete <tree> <node>                        delete a node and its subtree
   set-tree <tree> [--title T] [-d desc] [--status draft|active|decided|implemented|archived]
@@ -45,8 +51,7 @@ usage: dtree <command> [options]
                                               (default DIR: ./.agents/skills)
 
 global options: -C/--project <app-root>  --author NAME  --as agent|human  --json  -h/--help  -V/--version
-kinds: ${KINDS.join(" ")}
-statuses: ${STATUSES.join(" ")}
+statuses, kinds, fields, labels and link types come from the tree's mode: run \`dtree config <tree>\`
 env: DTREE_AUTHOR, DTREE_AUTHOR_TYPE, DTREE_VERBOSE, DTREE_TEMPLATES_PATH, XDG_CONFIG_HOME
 `;
 
@@ -69,6 +74,7 @@ const COMMANDS = {
   template: { args: ["action", "target?"], opts: { out: { ...S, short: "o" }, name: S } },
   "create-mode": { args: ["name"], required: ["yaml"], opts: { yaml: S, user: B, force: B } },
   "remove-mode": { args: ["name"], opts: { user: B } },
+  config: { args: ["tree?"], opts: { mode: S } },
   show: { args: ["tree"], opts: { body: B } },
   node: { args: ["tree", "node"] },
   add: {
@@ -84,6 +90,9 @@ const COMMANDS = {
       pro: { ...S, multiple: true },
       con: { ...S, multiple: true },
       assignee: S,
+      label: { ...S, multiple: true },
+      field: { ...S, multiple: true },
+      lock: S,
     },
   },
   update: {
@@ -98,6 +107,8 @@ const COMMANDS = {
       con: { ...S, multiple: true },
       rationale: { ...S, short: "r" },
       assignee: S,
+      label: { ...S, multiple: true },
+      field: { ...S, multiple: true },
       parent: S,
     },
   },
@@ -106,6 +117,8 @@ const COMMANDS = {
   comment: { args: ["tree", "node", "text"], opts: { "reply-to": S } },
   resolve: { args: ["tree", "node", "comment"], opts: { reopen: B } },
   link: { args: ["tree", "src", "dst"], opts: { type: S } },
+  lock: { args: ["tree", "node"], opts: { scope: S } },
+  unlock: { args: ["tree", "node"] },
   unlink: { args: ["tree", "src", "dst"] },
   delete: { args: ["tree", "node"] },
   "set-tree": { args: ["tree"], opts: { title: S, description: { ...S, short: "d" }, status: S } },

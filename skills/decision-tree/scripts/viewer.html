@@ -66,11 +66,14 @@ main{display:flex;flex-direction:column;min-width:0}
 .card .top .id{color:var(--muted);font-weight:500;margin-left:auto;text-transform:none}
 .card .ttl{font-weight:600;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3}
 .card .bot{display:flex;align-items:center;gap:5px;margin-top:auto;white-space:nowrap;overflow:hidden}
-.card.st-rejected .ttl{text-decoration:line-through;color:var(--muted)}
-.card.st-rejected,.card.st-deferred{background:#fafafa}
-.card.st-chosen{background:#f0fdf4;border-color:#bbf7d0;border-left-color:var(--c)}
+.card.rl-rejected .ttl{text-decoration:line-through;color:var(--muted)}
+.card.rl-rejected,.card.st-deferred{background:#fafafa}
+.card.chosen{background:#f0fdf4;border-color:#bbf7d0;border-left-color:var(--c)}
 .toggle{position:absolute;right:-11px;top:31px;width:22px;height:22px;border-radius:11px;padding:0;font-size:11px;line-height:20px;text-align:center;background:#fff}
 .pill{font-size:10.5px;padding:0 7px;border-radius:9px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.r-open{background:#eef0f5;color:#465066}.r-waiting{background:#ffedd5;color:#b45309;border-color:#fdba74}.r-blocked{background:#fee2e2;color:#b91c1c}
+.r-accepted{background:#dcfce7;color:#15803d}.r-rejected{background:#f1f1f1;color:#8a8f99}.r-closed{background:#eceff4;color:#5b6577}
+.lbl{font-size:10.5px;padding:0 6px;border-radius:9px;background:#eef2ff;color:#4338ca;white-space:nowrap}
 .s-open{background:#eef0f5;color:#465066}.s-exploring{background:#e0ecff;color:#1d4ed8}
 .s-needs-input{background:#ffedd5;color:#b45309;border-color:#fdba74}.s-blocked{background:#fee2e2;color:#b91c1c}
 .s-decided{background:#dcfce7;color:#15803d}.s-chosen{background:#16a34a;color:#fff}
@@ -87,7 +90,7 @@ main{display:flex;flex-direction:column;min-width:0}
 .orow.dim{opacity:.3}
 .orow .ty{font-size:10.5px;font-weight:700;color:var(--c);text-transform:uppercase;min-width:74px}
 .orow .tt{flex:1}
-.orow.st-rejected .tt{text-decoration:line-through;color:var(--muted)}
+.orow.rl-rejected .tt{text-decoration:line-through;color:var(--muted)}
 #activity{position:absolute;inset:0;overflow:auto;padding:14px 18px}
 .act{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
 .act .when{color:var(--muted);width:150px;flex:none}
@@ -144,7 +147,7 @@ const RO = !!STATIC;
 if (RO) document.body.classList.add("ro");
 const COLORS = {goal:"var(--goal)",question:"var(--question)",option:"var(--option)",decision:"var(--decision)",task:"var(--task)",note:"var(--note)"};
 const W = 240, H = 84, GX = 70, GY = 18;
-const S = {projects:[], meta:null, pid:null, slug:null, tree:null, sel:null, view:localStorage.getItem("dt.view")||"graph",
+const S = {projects:[], meta:null, pid:null, slug:null, coll:"trees", tree:null, sel:null, view:localStorage.getItem("dt.view")||"graph",
   q:"", fstatus:"", collapsed:new Set(), zoom:1, panX:40, panY:40, dirty:false, online:true, needFit:true};
 
 const $ = s => document.querySelector(s);
@@ -161,7 +164,14 @@ function el(tag, attrs, ...kids){
   for (const k of kids.flat()) if (k != null && k !== false) e.append(k.nodeType ? k : String(k));
   return e;
 }
-const pill = (st) => el("span", {class:"pill s-"+st}, st);
+const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const cfg = () => (S.tree && S.tree.config) || S.meta.legacy_config;
+const roleOf = st => hasOwn(cfg().statuses, st) ? cfg().statuses[st].role : null;
+const withRole = r => Object.keys(cfg().statuses).filter(st => roleOf(st) === r);
+const statusName = st => hasOwn(cfg().statuses, st) ? cfg().statuses[st].name : st;
+const isChosen = n => n.type === "option" && n.status === withRole("accepted").slice(-1)[0];
+const fieldVal = (n, id) => S.meta.builtin_fields.includes(id) ? n[id] : (n.fields || {})[id];
+const pill = (st) => el("span", {class:`pill s-${st} r-${roleOf(st)}`, title:statusName(st)}, st);
 const typeLabel = n => n.type === "question" && n.kind ? "Q · " + n.kind : n.type;
 const fmt = ts => ts ? new Date(ts).toLocaleString() : "";
 const ago = ts => { if (!ts) return ""; const s=(Date.now()-new Date(ts))/1000;
@@ -179,7 +189,7 @@ async function api(method, path, body){
   return data;
 }
 async function mutate(method, path, body){
-  try { S.tree = await api(method, `/projects/${S.pid}/trees/${encodeURIComponent(S.slug)}${path}`, body||{}); S.dirty=false; renderAll(); refreshProjects(); return true; }
+  try { S.tree = await api(method, `/projects/${S.pid}/${S.coll}/${encodeURIComponent(S.slug)}${path}`, body||{}); S.dirty=false; renderAll(); refreshProjects(); return true; }
   catch(e){ alert(e.message); return false; }
 }
 
@@ -201,7 +211,7 @@ function waiting(aud){
   const other = aud === "agent" ? "human" : "agent", out = [];
   for (const n of Object.values(nodes())){
     for (const t of threads(n)) if (!t[0].resolved && t[t.length-1].author_type === other) out.push({n, t, kind:"comment"});
-    if (aud === "human" && n.status === "needs-input") out.push({n, kind:"needs-input"});
+    if (aud === "human" && roleOf(n.status) === "waiting") out.push({n, kind:"needs-input"});
   }
   return out;
 }
@@ -209,21 +219,21 @@ function matches(n){
   if (S.fstatus && n.status !== S.fstatus) return false;
   if (!S.q) return true;
   const q = S.q.toLowerCase();
-  return [n.id, n.title, n.body, n.rationale, ...(n.pros||[]), ...(n.cons||[]), ...n.comments.map(c => c.text)].join(" ").toLowerCase().includes(q);
+  return [n.id, n.title, n.body, n.rationale, ...(n.pros||[]), ...(n.cons||[]), ...Object.values(n.fields||{}).flat(), ...(n.labels||[]), ...n.comments.map(c => c.text)].join(" ").toLowerCase().includes(q);
 }
 function loadCollapsed(){ try { S.collapsed = new Set(JSON.parse(localStorage.getItem(`dt.col.${S.pid}.${S.slug}`)||"[]")); } catch { S.collapsed = new Set(); } }
 function saveCollapsed(){ localStorage.setItem(`dt.col.${S.pid}.${S.slug}`, JSON.stringify([...S.collapsed])); }
 
 // ------------------------------------------------------------ routing / data
-function setHash(){ const h = S.slug ? `#/p/${S.pid}/t/${encodeURIComponent(S.slug)}${S.sel?"/n/"+S.sel:""}` : ""; if (location.hash !== h) history.replaceState(null, "", h || location.pathname); }
-function parseHash(){ const m = location.hash.match(/^#\/p\/([^/]+)\/t\/([^/]+)(?:\/n\/([^/]+))?/); return m ? {pid:m[1], slug:decodeURIComponent(m[2]), sel:m[3]||null} : null; }
+function setHash(){ const h = S.slug ? `#/p/${S.pid}/${S.coll === "drafts" ? "d" : "t"}/${encodeURIComponent(S.slug)}${S.sel?"/n/"+S.sel:""}` : ""; if (location.hash !== h) history.replaceState(null, "", h || location.pathname); }
+function parseHash(){ const m = location.hash.match(/^#\/p\/([^/]+)\/([td])\/([^/]+)(?:\/n\/([^/]+))?/); return m ? {pid:m[1], coll:m[2] === "d" ? "drafts" : "trees", slug:decodeURIComponent(m[3]), sel:m[4]||null} : null; }
 
 async function refreshProjects(){
   if (!RO) try {
     S.projects = await api("GET", "/projects");
     S.online = true;
     if (S.tree){
-      const p = S.projects.find(p => p.id === S.pid), t = p && p.trees.find(t => t.id === S.slug);
+      const p = S.projects.find(p => p.id === S.pid), t = p && (p[S.coll] || []).find(t => t.id === S.slug);
       if (t && t.revision !== S.tree.revision){
         if (S.dirty) showBanner(true); else await openTree(S.pid, S.slug, S.sel, true);
       }
@@ -239,11 +249,12 @@ function showBanner(on){
   if (on) b.append("This tree was changed by someone else while you were editing. ",
     el("button", {class:"small", onclick:() => { S.dirty=false; showBanner(false); openTree(S.pid, S.slug, S.sel, true); }}, "Reload (discard my edits)"));
 }
-async function openTree(pid, slug, sel, keepView){
-  try { S.tree = RO ? STATIC.trees[`${pid}/${slug}`] : await api("GET", `/projects/${pid}/trees/${encodeURIComponent(slug)}`); }
+async function openTree(pid, slug, sel, keepView, coll){
+  coll = coll || (keepView ? S.coll : "trees");
+  try { S.tree = RO ? STATIC.trees[`${pid}/${slug}`] : await api("GET", `/projects/${pid}/${coll}/${encodeURIComponent(slug)}`); }
   catch(e){ S.tree = null; alert(e.message); return; }
-  const switched = S.pid !== pid || S.slug !== slug;
-  S.pid = pid; S.slug = slug; S.sel = sel && S.tree.nodes[sel] ? sel : (keepView ? (S.tree.nodes[S.sel] ? S.sel : null) : null);
+  const switched = S.pid !== pid || S.slug !== slug || S.coll !== coll;
+  S.pid = pid; S.slug = slug; S.coll = coll; S.sel = sel && S.tree.nodes[sel] ? sel : (keepView ? (S.tree.nodes[S.sel] ? S.sel : null) : null);
   if (switched){ loadCollapsed(); S.needFit = true; S.dirty = false; showBanner(false); }
   renderAll();
 }
@@ -264,7 +275,7 @@ function renderSidebar(){
         el("button", {class:"small edit-only", title:"New decision tree", onclick:() => newTreeDialog(p)}, "+ tree")));
     if (!p.trees.length) box.append(el("div", {class:"cm", style:{padding:"4px 8px"}}, "no trees yet"));
     for (const t of p.trees){
-      box.append(el("div", {class:"tree-item" + (p.id === S.pid && t.id === S.slug ? " active" : ""), onclick:() => openTree(p.id, t.id)},
+      box.append(el("div", {class:"tree-item" + (p.id === S.pid && t.id === S.slug && S.coll === "trees" ? " active" : ""), onclick:() => openTree(p.id, t.id)},
         el("div", {class:"t"}, t.title),
         el("div", {class:"b"}, pill(t.status || "draft"),
           el("span", {class:"badge"}, `${t.node_count||0} nodes`),
@@ -273,6 +284,12 @@ function renderSidebar(){
           t.waiting_on_human ? el("span", {class:"badge human", title:"waiting on humans"}, `${t.waiting_on_human} for humans`) : null,
           t.waiting_on_agent ? el("span", {class:"badge agent", title:"waiting on agents"}, `${t.waiting_on_agent} for agents`) : null),
         el("div", {class:"cm"}, "updated " + ago(t.updated_at))));
+    }
+    if (!RO){
+      box.append(el("div", {class:"phead"}, el("span", {class:"cm"}, "Mode drafts"),
+        el("button", {class:"small", title:"Create or edit a mode (a reusable template with its own fields, statuses, link types and labels)", onclick:() => modeDialog(p)}, "+ mode")));
+      for (const t of p.drafts || []) box.append(el("div", {class:"tree-item" + (p.id === S.pid && t.id === S.slug && S.coll === "drafts" ? " active" : ""), onclick:() => openTree(p.id, t.id, null, false, "drafts")},
+        el("div", {class:"t"}, "mode: " + t.id), el("div", {class:"b"}, el("span", {class:"badge"}, "draft"), el("span", {class:"badge"}, `${t.node_count||0} nodes`))));
     }
     sb.append(box);
   }
@@ -301,6 +318,25 @@ function newTreeDialog(p){
   d.showModal(); title.focus();
 }
 
+function modeDialog(p){
+  const d = $("#dlg"); d.replaceChildren();
+  const name = el("input", {placeholder:"e.g. team-planning"}), base = el("select", {});
+  const how = el("select", {}, el("option", {value:"extend"}, "extend it: start blank, inherit its settings"), el("option", {value:"copy"}, "copy it: its questions and settings"));
+  api("GET", `/projects/${p.id}/templates`).then(rows => base.append(...rows.filter(r => r.active && !r.error)
+    .map(r => el("option", {value:r.name, selected:r.name === "default"}, `${r.title} — ${r.name} (${r.source})`)))).catch(() => {});
+  d.append(el("h3", {style:{marginTop:0}}, `Mode in ${p.name}`),
+    el("label", {}, "Mode name (an existing mode's name edits that mode)"), name,
+    el("label", {}, "Based on"), base, el("div", {style:{marginTop:"6px"}}, how),
+    el("div", {class:"row tight", style:{justifyContent:"flex-end", marginTop:"14px"}},
+      el("button", {onclick:() => d.close()}, "Cancel"),
+      el("button", {class:"primary", onclick: async () => {
+        const n = name.value.trim(), body = {name:n};
+        if (how.value === "copy" || n === base.value) body.from = base.value; else body.extends = base.value;
+        try { const t = await api("POST", `/projects/${p.id}/drafts`, body); d.close(); await refreshProjects(); openTree(p.id, t.id, null, false, "drafts"); }
+        catch(e){ alert(e.message); } }}, "Open editor")));
+  d.showModal(); name.focus();
+}
+
 // ------------------------------------------------------------ toolbar
 function renderToolbar(){
   const tb = $("#toolbar"); tb.replaceChildren();
@@ -311,7 +347,7 @@ function renderToolbar(){
     el("button", {class: S.view === v ? "on" : "", onclick:() => { S.view = v; localStorage.setItem("dt.view", v); S.needFit = true; renderAll(); }}, v)));
   const search = el("input", {placeholder:"search nodes…", value:S.q, style:{width:"170px"}, oninput:e => { S.q = e.target.value; renderCanvas(); }});
   const fs = el("select", {onchange:e => { S.fstatus = e.target.value; renderCanvas(); }}, el("option", {value:""}, "all statuses"),
-    ...S.meta.statuses.map(s => el("option", {value:s, selected:S.fstatus === s}, s)));
+    ...Object.keys(cfg().statuses).map(s => el("option", {value:s, selected:S.fstatus === s}, statusName(s))));
   const tstat = el("select", {disabled:RO, onchange:e => mutate("PATCH", "", {status:e.target.value}), title:"tree status"},
     ...S.meta.tree_statuses.map(s => el("option", {value:s, selected:S.tree.status === s}, s)));
   tstat.style.width = "auto";
@@ -354,7 +390,7 @@ function renderCanvas(){
   for (const n of Object.values(nodes())){
     if (!pos[n.id] || !n.parent || !pos[n.parent]) continue;
     const a = pos[n.parent], b = pos[n.id], x1 = a.x+W, y1 = a.y+H/2, x2 = b.x, y2 = b.y+H/2, mx = (x1+x2)/2;
-    const chosen = n.status === "chosen", rej = n.status === "rejected";
+    const chosen = isChosen(n), rej = roleOf(n.status) === "rejected";
     path(`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`, chosen ? "#16a34a" : (rej ? "#d4d6dc" : "#b7bdcc"), rej ? "4 4" : null, chosen ? 2.6 : 1.6);
   }
   for (const n of Object.values(nodes())) for (const l of n.links){
@@ -368,11 +404,12 @@ function renderCanvas(){
   for (const n of Object.values(nodes())){
     const p = pos[n.id]; if (!p) continue;
     const ot = openThreads(n), nk = kids(n.id).length, hit = S.q && matches(n);
-    const card = el("div", {class:`card st-${n.status}` + (S.sel === n.id ? " sel" : "") + (!matches(n) ? " dim" : "") + (hit ? " hit" : ""),
+    const card = el("div", {class:`card st-${n.status} rl-${roleOf(n.status)}` + (isChosen(n) ? " chosen" : "") + (S.sel === n.id ? " sel" : "") + (!matches(n) ? " dim" : "") + (hit ? " hit" : ""),
         style:{left:p.x+"px", top:p.y+"px", "--c":COLORS[n.type]}, onclick:e => { e.stopPropagation(); select(n.id); }},
-      el("div", {class:"top"}, typeLabel(n), n.assignee ? el("span", {class:"badge"}, "@"+n.assignee) : null, el("span", {class:"id"}, n.id)),
-      el("div", {class:"ttl", title:n.title}, (n.status === "chosen" ? "★ " : "") + n.title),
-      el("div", {class:"bot"}, pill(n.status),
+      el("div", {class:"top"}, typeLabel(n), n.assignee ? el("span", {class:"badge"}, "@"+n.assignee) : null,
+        n.lock ? el("span", {class:"badge", title:`locked (${n.lock}): no nodes can be added, moved or deleted ${n.lock === "children" ? "directly under it" : "anywhere beneath it"}`}, "locked") : null, el("span", {class:"id"}, n.id)),
+      el("div", {class:"ttl", title:n.title}, (isChosen(n) ? "★ " : "") + n.title),
+      el("div", {class:"bot"}, pill(n.status), ...(n.labels||[]).map(l => el("span", {class:"lbl"}, l)),
         n.comments.length ? el("span", {class:"cm" + (ot ? " open" : "")}, `${n.comments.length} comment${n.comments.length > 1 ? "s" : ""}` + (ot ? ` · ${ot} open` : "")) : null,
         n.links.length ? el("span", {class:"cm"}, `${n.links.length} link${n.links.length > 1 ? "s" : ""}`) : null));
     if (nk) card.append(el("button", {class:"toggle", title: S.collapsed.has(n.id) ? `expand (${nk})` : "collapse",
@@ -408,9 +445,9 @@ function renderOutline(cv){
   const box = el("div", {id:"outline"});
   function walk(id){
     const n = nodes()[id], nk = kids(id), col = S.collapsed.has(id), ot = openThreads(n);
-    const li = el("li", {}, el("div", {class:`orow st-${n.status}` + (S.sel === id ? " sel" : "") + (!matches(n) ? " dim" : ""), style:{"--c":COLORS[n.type]}, onclick:() => select(id)},
+    const li = el("li", {}, el("div", {class:`orow st-${n.status} rl-${roleOf(n.status)}` + (S.sel === id ? " sel" : "") + (!matches(n) ? " dim" : ""), style:{"--c":COLORS[n.type]}, onclick:() => select(id)},
       nk.length ? el("span", {style:{cursor:"pointer", width:"14px"}, onclick:e => { e.stopPropagation(); col ? S.collapsed.delete(id) : S.collapsed.add(id); saveCollapsed(); renderCanvas(); }}, col ? "▸" : "▾") : el("span", {style:{width:"14px"}}),
-      el("span", {class:"ty"}, typeLabel(n)), el("span", {class:"tt"}, (n.status === "chosen" ? "★ " : "") + n.title),
+      el("span", {class:"ty"}, typeLabel(n)), el("span", {class:"tt"}, (isChosen(n) ? "★ " : "") + n.title),
       n.comments.length ? el("span", {class:"cm" + (ot ? " open" : "")}, `${n.comments.length} comment${n.comments.length > 1 ? "s" : ""}` + (ot ? ` · ${ot} open` : "")) : null,
       pill(n.status), el("span", {class:"cm"}, n.id)));
     if (nk.length && !col) li.append(el("ul", {}, ...nk.map(c => walk(c.id))));
@@ -438,9 +475,27 @@ function renderDetails(){
   const markDirty = () => { S.dirty = true; save.disabled = false; revert.disabled = false; };
   const f = {};
   const field = (key, input) => { f[key] = input; input.addEventListener("input", markDirty); input.addEventListener("change", markDirty); if (RO) input.disabled = true; return input; };
-  const save = el("button", {class:"primary", disabled:true, onclick:() => mutate("PATCH", `/nodes/${n.id}`, {
-    title:f.title.value, type:f.type.value, kind:f.kind.value, status:f.status.value, assignee:f.assignee.value,
-    body:f.body.value, pros:f.pros.value, cons:f.cons.value, rationale:f.rationale.value})}, "Save");
+  const C = cfg();
+  const changes = () => {
+    const out = {title:f.title.value, type:f.type.value, status:f.status.value, lock:f.lock.value || null};
+    if (f.kind) out.kind = f.kind.value;
+    for (const id of Object.keys(C.fields)) out[id] = f["f:" + id].value;
+    if (C.labels.length) out.labels = C.labels.filter(l => f["l:" + l].checked);
+    return out;
+  };
+  const save = el("button", {class:"primary", disabled:true, onclick:() => mutate("PATCH", `/nodes/${n.id}`, changes())}, "Save");
+  const fieldInput = (id, def) => {
+    const v = fieldVal(n, id);
+    if (def.type === "list") return el("textarea", {rows:3}, (v||[]).join("\n"));
+    if (def.type === "text") return el("input", {value:v||""});
+    return el("textarea", {rows:id === "body" ? 4 : 2}, v||"");
+  };
+  const fieldRows = Object.entries(C.fields).map(([id, def]) =>
+    el("div", {}, el("label", {}, def.name + (def.type === "list" ? " (one per line)" : "")), field("f:" + id, fieldInput(id, def))));
+  const labelRow = C.labels.length ? el("div", {}, el("label", {}, "Labels"), ...C.labels.map(l =>
+    el("label", {style:{display:"inline-flex", gap:"4px", alignItems:"center", marginRight:"10px", textTransform:"none"}},
+      field("l:" + l, el("input", {type:"checkbox", checked:(n.labels||[]).includes(l), style:{width:"auto"}})), l))) : "";
+  const waitStatus = withRole("waiting")[0];
   const revert = el("button", {disabled:true, onclick:() => { S.dirty = false; renderDetails(); }}, "Revert");
   const parent = n.parent && nodes()[n.parent];
   d.append(
@@ -449,29 +504,26 @@ function renderDetails(){
     parent ? el("div", {class:"cm", style:{marginTop:"6px"}}, "under ", el("a", {href:"#", onclick:e => { e.preventDefault(); select(parent.id); }}, `${parent.id} · ${parent.title}`)) : "",
     el("label", {}, "Title"), field("title", el("input", {value:n.title})),
     el("div", {class:"row"},
-      el("div", {}, el("label", {}, "Status"), field("status", el("select", {}, ...S.meta.statuses.map(s => el("option", {value:s, selected:n.status === s}, s))))),
+      el("div", {}, el("label", {}, "Status"), field("status", el("select", {}, ...Object.keys(C.statuses).map(s => el("option", {value:s, selected:n.status === s}, statusName(s)))))),
       el("div", {}, el("label", {}, "Type"), field("type", el("select", {}, ...S.meta.node_types.map(s => el("option", {value:s, selected:n.type === s}, s))))),
-      el("div", {}, el("label", {}, "Kind"), field("kind", el("select", {}, el("option", {value:""}, "—"), ...S.meta.kinds.map(s => el("option", {value:s, selected:n.kind === s}, s)))))),
-    el("label", {}, "Details"), field("body", el("textarea", {rows:4, placeholder:"context, constraints, evidence…"}, n.body)),
-    el("div", {class:"row"},
-      el("div", {}, el("label", {}, "Pros (one per line)"), field("pros", el("textarea", {rows:3}, (n.pros||[]).join("\n")))),
-      el("div", {}, el("label", {}, "Cons (one per line)"), field("cons", el("textarea", {rows:3}, (n.cons||[]).join("\n"))))),
-    el("label", {}, "Rationale / answer"), field("rationale", el("textarea", {rows:2, placeholder:"why this was decided"}, n.rationale||"")),
-    el("label", {}, "Assignee"), field("assignee", el("input", {value:n.assignee||"", placeholder:"agent, a person's name…"})),
+      C.kinds.length || n.kind ? el("div", {}, el("label", {}, "Kind"), field("kind", el("select", {}, el("option", {value:""}, "—"), ...C.kinds.map(s => el("option", {value:s, selected:n.kind === s}, s))))) : null,
+      el("div", {}, el("label", {}, "Lock"), field("lock", el("select", {title:"children: no nodes added, moved or deleted directly under it; subtree: none anywhere beneath it"},
+        el("option", {value:""}, "unlocked"), ...S.meta.locks.map(s => el("option", {value:s, selected:n.lock === s}, s)))))),
+    ...fieldRows, labelRow,
     el("div", {class:"row tight edit-only", style:{marginTop:"10px", gap:"6px"}}, save, revert,
-      n.type === "option" && n.status !== "chosen" ? el("button", {onclick:() => {
-        const r = prompt("Why choose this option? (rationale)", f.rationale.value || ""); if (r !== null) mutate("POST", `/nodes/${n.id}/choose`, {rationale:r}); }}, "★ Choose option") : null,
-      n.status !== "needs-input" ? el("button", {title:"flag for human input", onclick:() => mutate("PATCH", `/nodes/${n.id}`, {status:"needs-input"})}, "Needs input") : null,
+      n.type === "option" && !isChosen(n) ? el("button", {onclick:() => {
+        const r = prompt("Why choose this option? (rationale)", f["f:rationale"] ? f["f:rationale"].value : ""); if (r !== null) mutate("POST", `/nodes/${n.id}/choose`, {rationale:r}); }}, "★ Choose option") : null,
+      waitStatus && n.status !== waitStatus ? el("button", {title:"flag for human input", onclick:() => mutate("PATCH", `/nodes/${n.id}`, {status:waitStatus})}, statusName(waitStatus)) : null,
       el("span", {style:{flex:1}}),
       n.id !== S.tree.root_id ? el("button", {class:"danger", onclick:() => { if (confirm(`Delete ${n.id} and its ${descCount(n.id)} descendant(s)?`)) { S.sel = n.parent; mutate("DELETE", `/nodes/${n.id}`); } }}, "Delete") : null),
     el("div", {class:"cm", style:{marginTop:"6px"}}, `created by ${n.created_by ? n.created_by.name + " (" + n.created_by.type + ")" : "?"} · ${fmt(n.created_at)} · updated ${ago(n.updated_at)}`));
-  if (n.status === "chosen" || n.chosen){
+  if (isChosen(n) || n.chosen){
     const ch = n.chosen && nodes()[n.chosen];
     if (ch) d.append(el("div", {class:"wait", style:{marginTop:"10px", background:"#f0fdf4"}, onclick:() => select(ch.id)}, "★ Chosen: ", el("b", {}, ch.title), ch.rationale ? el("div", {class:"cm prewrap"}, ch.rationale) : null));
   }
   // children
   const ch = kids(n.id);
-  d.append(el("h3", {}, `Children (${ch.length})`));
+  d.append(el("h3", {}, `Children (${ch.length})` + (n.lock ? ` · locked (${n.lock})` : "")));
   for (const c of ch) d.append(el("span", {class:"chip", style:{borderLeft:`4px solid ${COLORS[c.type]}`}, onclick:() => select(c.id)}, `${c.id} · ${c.title.slice(0, 40)}`, " ", pill(c.status)));
   d.append(addChildForm(n));
   // links
@@ -481,9 +533,9 @@ function renderDetails(){
       RO ? null : el("span", {class:"x", title:"remove", onclick:e => { e.stopPropagation(); mutate("DELETE", `/nodes/${n.id}/links`, {target:l.target, type:l.type}); }}, "✕"))); }
   const incoming = Object.values(nodes()).flatMap(m => m.links.filter(l => l.target === n.id).map(l => ({m, l})));
   for (const {m, l} of incoming) d.append(el("span", {class:"chip", onclick:() => select(m.id)}, `${m.id} ${l.type} this`));
-  if (!RO){
+  if (!RO && Object.keys(C.link_types).length){
     const tgt = el("select", {}, ...Object.values(nodes()).filter(m => m.id !== n.id).map(m => el("option", {value:m.id}, `${m.id} · ${m.title.slice(0, 40)}`)));
-    const lt = el("select", {}, ...S.meta.link_types.map(t => el("option", {value:t}, t)));
+    const lt = el("select", {}, ...Object.entries(C.link_types).map(([t, e]) => el("option", {value:t}, e.name)));
     d.append(el("div", {class:"row", style:{marginTop:"6px"}}, lt, tgt, el("button", {style:{flex:"none"}, onclick:() => mutate("POST", `/nodes/${n.id}/links`, {target:tgt.value, type:lt.value})}, "Link")));
   }
   // comments
@@ -507,9 +559,10 @@ function renderThread(n, t){
     el("div", {class:"meta"}, el("span", {class:"who"}, c.author), el("span", {class:"badge " + c.author_type}, c.author_type), el("span", {title:fmt(c.created_at)}, ago(c.created_at)), el("span", {style:{marginLeft:"auto"}}, c.id)),
     el("div", {class:"prewrap"}, c.text)));
   if (!RO){
-    const ta = el("textarea", {rows:2, placeholder:"Reply…", style:{marginTop:"6px", minHeight:"36px"}});
+    const threaded = cfg().comments.threads;
+    const ta = threaded ? el("textarea", {rows:2, placeholder:"Reply…", style:{marginTop:"6px", minHeight:"36px"}}) : "";
     box.append(ta, el("div", {class:"row tight", style:{gap:"6px", marginTop:"5px"}},
-      el("button", {class:"small", onclick:() => mutate("POST", `/nodes/${n.id}/comments`, {text:ta.value, reply_to:root.id})}, "Reply"),
+      threaded ? el("button", {class:"small", onclick:() => mutate("POST", `/nodes/${n.id}/comments`, {text:ta.value, reply_to:root.id})}, "Reply") : null,
       el("button", {class:"small", onclick:() => mutate("PATCH", `/nodes/${n.id}/comments/${root.id}`, {resolved:!root.resolved})}, root.resolved ? "Reopen" : "Resolve"),
       root.resolved ? el("span", {class:"badge"}, "resolved") : null));
   } else if (root.resolved) box.append(el("span", {class:"badge"}, "resolved"));
@@ -520,7 +573,8 @@ function addChildForm(n){
   const defaults = n.type === "question" ? ["option", "question", "note"] : ["question", "option", "decision", "task", "note"];
   const form = el("div", {style:{display:"none", border:"1px solid var(--line)", borderRadius:"8px", padding:"8px", marginTop:"6px"}});
   let type = "question";
-  const kind = el("select", {}, el("option", {value:""}, "kind —"), ...S.meta.kinds.map(k => el("option", {value:k}, k)));
+  const kinds = cfg().kinds;
+  const kind = el("select", {}, el("option", {value:""}, "kind —"), ...kinds.map(k => el("option", {value:k}, k)));
   const title = el("input", {placeholder:"title"}), body = el("textarea", {rows:2, placeholder:"details (optional)"});
   const hdr = el("b", {});
   form.append(hdr, el("div", {class:"row", style:{marginTop:"6px"}}, kind), el("div", {style:{marginTop:"6px"}}, title), el("div", {style:{marginTop:"6px"}}, body),
@@ -528,13 +582,14 @@ function addChildForm(n){
       el("button", {class:"primary", onclick:async () => { if (await mutate("POST", "/nodes", {parent:n.id, type, kind:type === "question" ? kind.value : "", title:title.value, body:body.value})) {} }}, "Add"),
       el("button", {onclick:() => form.style.display = "none"}, "Cancel")));
   wrap.append(el("div", {class:"row tight", style:{gap:"5px", flexWrap:"wrap"}}, ...defaults.map(t => el("button", {class:"small", onclick:() => {
-    type = t; hdr.textContent = `New ${t} under ${n.id}`; kind.parentElement.style.display = t === "question" ? "" : "none"; form.style.display = "block"; title.focus(); }}, "+ " + t))), form);
+    type = t; hdr.textContent = `New ${t} under ${n.id}`; kind.parentElement.style.display = t === "question" && kinds.length ? "" : "none"; form.style.display = "block"; title.focus(); }}, "+ " + t))), form);
   return wrap;
 }
 function renderOverview(d){
+  if (S.tree.draft) return renderModeEditor(d);
   const t = S.tree, sum = {};
   for (const n of Object.values(t.nodes)) sum[n.status] = (sum[n.status]||0) + 1;
-  d.append(el("h2", {}, t.title), el("div", {class:"row tight", style:{gap:"6px"}}, pill(t.status), el("span", {class:"cm"}, `${Object.keys(t.nodes).length} nodes · rev ${t.revision} · updated ${ago(t.updated_at)}${t.template ? " · template " + t.template : ""}`)));
+  d.append(el("h2", {}, t.title), el("div", {class:"row tight", style:{gap:"6px"}}, pill(t.status), el("span", {class:"cm"}, `${Object.keys(t.nodes).length} nodes · rev ${t.revision} · updated ${ago(t.updated_at)}${t.template ? ` · ${t.config ? "mode" : "template"} ` + t.template : ""}`)));
   if (t.description) d.append(el("p", {class:"prewrap"}, t.description));
   d.append(el("div", {class:"edit-only", style:{margin:"6px 0"}}, el("button", {class:"small", title:"Save this tree's questions and options (no statuses, comments or history) as a reusable template in .decisions/templates/", onclick:saveAsTemplate}, "Save as template")));
   d.append(el("div", {}, ...Object.entries(sum).map(([s, c]) => el("span", {style:{marginRight:"6px"}}, pill(s), " ", c))));
@@ -544,15 +599,72 @@ function renderOverview(d){
     for (const it of items){
       const last = it.t && it.t[it.t.length-1];
       d.append(el("div", {class:"wait", onclick:() => select(it.n.id)},
-        el("div", {}, el("b", {}, it.n.id), " · ", it.n.title, " ", it.kind === "needs-input" ? pill("needs-input") : null),
+        el("div", {}, el("b", {}, it.n.id), " · ", it.n.title, " ", it.kind === "needs-input" ? pill(it.n.status) : null),
         last ? el("div", {class:"cm prewrap"}, `${last.author}: ${last.text.slice(0, 160)}`) : null));
     }
   };
   sec("Waiting on humans", waiting("human"), "Nothing needs a human right now.");
   sec("Waiting on agents", waiting("agent"), "No unanswered human comments.");
-  const openQ = Object.values(t.nodes).filter(n => n.type === "question" && ["open", "exploring", "blocked"].includes(n.status));
+  const openQ = Object.values(t.nodes).filter(n => n.type === "question" && ["open", "blocked"].includes(roleOf(n.status)));
   sec("Open questions", openQ.map(n => ({n})), "All questions are resolved.");
   d.append(el("p", {class:"cm", style:{marginTop:"18px"}}, "Click a node to see details, discuss, change status or add children. Drag to pan, scroll to zoom."));
+}
+
+/** A mode draft's overview: its settings, each section with a "+" row; seed nodes are edited like any tree. */
+function renderModeEditor(d){
+  const t = S.tree, C = t.config, dr = t.draft;
+  const put = (config, ext) => mutate("PATCH", "/config", {...(config ? {config} : {}), ...(ext !== undefined ? {extends:ext} : {})});
+  const setEntry = (sec, id, v) => ({...C, [sec]:{...C[sec], [id]:v}});
+  const dropEntry = (sec, id) => { const m = {...C[sec]}; delete m[id]; return {...C, [sec]:m}; };
+  const sel = (opts, cur, onchange) => el("select", {onchange}, ...opts.map(o => el("option", {value:o, selected:o === cur}, o)));
+  const btn = (label, title, onclick) => el("button", {class:"small", style:{flex:"none"}, title, onclick}, label);
+  const ext = sel([dr.extends], dr.extends, e => put(null, e.target.value));
+  api("GET", `/projects/${S.pid}/templates`).then(rows => { ext.replaceChildren(...rows.filter(r => r.active && !r.error)
+    .map(r => el("option", {value:r.name, selected:r.name === dr.extends}, r.name))); }).catch(() => {});
+  d.append(el("h2", {}, `Mode: ${dr.mode}`),
+    el("p", {class:"cm"}, "Draft. Add and edit its seed questions on the left like any tree, and its settings below. Saving writes .decisions/templates/" + dr.mode + ".yaml with only what differs from the mode it extends."),
+    el("div", {class:"row"}, el("label", {style:{flex:"none", margin:0}}, "Extends"), ext),
+    el("div", {class:"row tight", style:{gap:"6px", marginTop:"8px"}},
+      el("button", {class:"primary", onclick:saveDraftMode}, "Save mode"),
+      el("button", {class:"danger", onclick:async () => { if (!confirm(`Discard the draft of ${dr.mode}?`)) return;
+        try { await api("DELETE", `/projects/${S.pid}/drafts/${encodeURIComponent(S.slug)}`, {}); closeTree(); } catch(e){ alert(e.message); } }}, "Discard draft")));
+  const keyed = (sec, title, extra) => {
+    d.append(el("h3", {}, `${title} (${Object.keys(C[sec]).length})`));
+    for (const [id, e] of Object.entries(C[sec])) d.append(el("div", {class:"row", style:{marginTop:"4px"}},
+      el("b", {style:{flex:"none", minWidth:"84px"}}, id),
+      el("input", {value:e.name, title:"display name", onchange:ev => put(setEntry(sec, id, {...e, name:ev.target.value}))}),
+      ...extra.map(([k, opts]) => sel(opts, e[k], ev => put(setEntry(sec, id, {...e, [k]:ev.target.value})))),
+      btn("✕", "remove", () => put(dropEntry(sec, id)))));
+    const nid = el("input", {placeholder:"new id"}), picks = extra.map(([, opts]) => sel(opts, opts[0]));
+    d.append(el("div", {class:"row", style:{marginTop:"4px"}}, nid, ...picks, btn("+", `add to ${title.toLowerCase()}`, () => {
+      const id = nid.value.trim(); if (!id) return;
+      put(setEntry(sec, id, {name:id, ...Object.fromEntries(extra.map(([k], i) => [k, picks[i].value]))})); })));
+  };
+  const list = (title, items, set) => {
+    d.append(el("h3", {}, `${title} (${items.length})`));
+    d.append(el("div", {}, ...items.map(x => el("span", {class:"chip"}, x, el("span", {class:"x", title:"remove", onclick:() => put(set(items.filter(y => y !== x)))}, "✕")))));
+    const v = el("input", {placeholder:"add…"});
+    d.append(el("div", {class:"row", style:{marginTop:"4px"}}, v, btn("+", `add to ${title.toLowerCase()}`, () => { const x = v.value.trim(); if (x) put(set([...items, x])); })));
+  };
+  keyed("fields", "Fields", [["type", S.meta.field_types]]);
+  keyed("statuses", "Statuses", [["role", S.meta.roles]]);
+  keyed("link_types", "Link types", []);
+  list("Labels", C.labels, v => ({...C, labels:v}));
+  list("Question kinds", C.kinds, v => ({...C, kinds:v}));
+  list("Review: required kinds", C.review.required_kinds, v => ({...C, review:{...C.review, required_kinds:v}}));
+  d.append(el("h3", {}, "Comments"), el("label", {style:{display:"inline-flex", gap:"6px", alignItems:"center", textTransform:"none"}},
+    el("input", {type:"checkbox", checked:!!C.comments.threads, style:{width:"auto"}, onchange:e => put({...C, comments:{...C.comments, threads:e.target.checked}})}), "threaded replies"));
+}
+function closeTree(){ S.tree = null; S.slug = null; S.sel = null; S.coll = "trees"; renderAll(); refreshProjects(); }
+async function saveDraftMode(){
+  const dr = S.tree.draft, url = `/projects/${S.pid}/drafts/${encodeURIComponent(S.slug)}/save`;
+  try {
+    let r;
+    try { r = await api("POST", url, {}); }
+    catch(e){ if (!/already exists/.test(e.message) || !confirm(`Overwrite the project mode "${dr.mode}"?`)) throw e; r = await api("POST", url, {force:true}); }
+    alert(`Saved mode "${r.name}" (${r.nodes} nodes) to ${r.path}.\nPick it in "+ tree" or run: dtree new "<title>" --mode ${r.name}`);
+    closeTree();
+  } catch(e){ alert(e.message); }
 }
 
 async function saveAsTemplate(){
@@ -573,7 +685,7 @@ async function boot(){
   S.meta = RO ? STATIC.meta : await api("GET", "/meta");
   await refreshProjects();
   const h = parseHash();
-  if (h) await openTree(h.pid, h.slug, h.sel);
+  if (h) await openTree(h.pid, h.slug, h.sel, false, RO ? "trees" : h.coll);
   else { const p = S.projects.find(p => p.trees.length); if (p) await openTree(p.id, p.trees[0].id); else renderAll(); }
   if (!RO) setInterval(refreshProjects, 3000);
 }

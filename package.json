@@ -1,6 +1,6 @@
 {
   "name": "@vineetkothari23/decision-tree",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Question-driven decision trees for planning software features: JSON in each app's .decisions/, an agent CLI, and a local HTML viewer for human-agent coordination. Ships as an agent skill.",
   "keywords": [
     "agent",

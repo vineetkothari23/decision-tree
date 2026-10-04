@@ -9,6 +9,19 @@ description: |
   placement, risk, tests and docs, record findings under each question, then
   choose a verdict with a rationale.
 tree_status: active
+extends: default
+config:
+  fields:
+    pros:
+      name: Pros
+      type: list
+    cons:
+      name: Cons
+      type: list
+    rationale:
+      name: Rationale
+      type: text_body
+  kinds: [why, what, how, where, risk, other]
 nodes:
   - title: Is this the right problem, and does the PR solve it?
     kind: why
@@ -68,6 +81,7 @@ nodes:
 
   - title: Review verdict
     type: decision
+    lock: children
     body: |
       Choose after answering the questions above. The rationale must cite the
       blocking findings (or state there are none).

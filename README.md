@@ -138,6 +138,15 @@ The YAML parser is built in (no dependencies) and supports only this subset: `#`
 and `|` / `>` block text (with `-` / `+` chomping). Anchors, aliases, tags, multiple documents,
 flow mappings and `? ` keys are rejected with `file:line` errors; indent with spaces, not tabs.
 
+### Mode config
+
+Templates with `extends:` or `config:` also configure the tree: its fields, statuses (each with a
+role), link types, labels, question kinds, review checks and comment threading. See
+[`skills/decision-tree/templates/README.md`](skills/decision-tree/templates/README.md#mode-config)
+for the format, inheritance rules and the built-in `default` mode. `dtree config <tree>` shows a
+tree's settings; `dtree lock <tree> <node> [--scope children|subtree]` / `dtree unlock` stop new
+branches; `--label` and `--field id=value` on `add`/`update` set labels and custom fields.
+
 ### Custom modes
 
 "Modes" are templates you register yourself. `create-mode` validates the file with the same rules
@@ -155,7 +164,8 @@ dtree remove-mode custom-planning [--user]                               # built
 A project or user mode with a built-in's name shadows it (`dtree modes` shows which one wins).
 The viewer's "+ tree" dialog offers every available template, and "Save as template" on a tree's
 overview saves its questions, options and nesting (not statuses, comments or history) as a project
-mode in `.decisions/templates/<name>.yaml`.
+mode in `.decisions/templates/<name>.yaml`. "+ mode" in the sidebar opens a mode draft that you
+edit exactly like a tree, plus a settings panel with a "+" row per section; "Save mode" writes it.
 
 ## Layout
 

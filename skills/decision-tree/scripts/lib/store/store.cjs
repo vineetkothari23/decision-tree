@@ -125,7 +125,10 @@ class Store {
     });
   }
 
-  /** Creates a tree; `template` (from resolveTemplate) seeds its nodes in the same locked write. */
+  /**
+   * Creates a tree; `template` (from templates/resolve) seeds its nodes in the same locked write. A configured
+   * mode's resolved config is copied into the tree, so it keeps working if the mode later changes or is removed.
+   */
   createTree(slug, title, description, author, template = null) {
     this.init();
     return this.withLock(() => {
@@ -147,6 +150,7 @@ class Store {
         activity: [],
       };
       if (template) tree.template = template.name;
+      if (template && template.resolved_config) tree.config = JSON.parse(JSON.stringify(template.resolved_config));
       const root = addNode(tree, { parent: null, type: "goal", title, body: description, author });
       tree.root_id = root.id;
       if (template) applyTemplate(tree, template, author);

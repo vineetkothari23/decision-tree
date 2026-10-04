@@ -15,6 +15,7 @@ Templates are an authoring format only: the created tree is stored as normal JSO
 
 | Name | Use it for | Seeds |
 |---|---|---|
+| `default` | The base every mode extends | nothing (config only: body, `relates-to`, active/accepted/rejected) |
 | `feature-planning` | Planning a new feature | why, who, scope, success metrics (needs human sign-off), approach, data/API changes, placement, rollout (feature flag vs. big-bang options), testing, security/privacy risk |
 | `pr-review` | Reviewing a pull request | intent, scope, approach, edge cases/error handling, placement, risk, tests, docs, and a `Review verdict` decision with Approve / Request changes / Comment only options |
 
@@ -40,7 +41,7 @@ nodes:                       # required, non-empty; attached under the root goal
     kind: why                # optional, questions only: why|what|how|where|who|when|risk|other
     body: |                  # optional prompts or guidance
       - What breaks if we stay?
-    status: open             # optional node status, default open (e.g. needs-input)
+    status: open             # optional node status, default: the mode's first open status
     assignee: human          # optional free text
     pros: [Fast to ship]     # optional, options only
     cons: [Needs migration]  # optional, options only
@@ -52,6 +53,59 @@ Only a YAML subset is accepted: comments, block mappings and sequences (indented
 plain/quoted scalars, integers, booleans, `null`, one-line flow sequences of scalars (`[a, "b, c"]`),
 and `|` / `>` block scalars. Anchors, aliases, tags, multiple documents, flow mappings, and complex
 keys are rejected with a file:line error.
+
+## Mode config
+
+A template with `extends:` or `config:` is a **mode**: besides seed nodes it sets the tree's
+fields, statuses, link types, labels, kinds, review checks and comment threading.
+
+```yaml
+template: 1
+name: team-planning
+title: Team planning
+extends: feature-planning      # optional; a mode with `config:` and no `extends:` extends `default`
+config:                        # only what differs from the parent
+  fields:                      # keyed: <id>: {name, type}; type is text | text_body | list
+    effort:
+      name: Effort
+      type: text
+    assignee: null             # null removes an inherited entry
+  statuses:                    # keyed: <id>: {name, role}
+    parked:
+      name: Parked
+      role: closed
+  link_types:                  # keyed: <id>: {name}
+    implements:
+      name: Implements
+  labels: [frontend, backend]  # lists replace the parent's list
+  kinds: [why, what, how, where, risk]
+  review:
+    required_kinds: [why, how] # `dtree review` warns when a kind is missing; must be in kinds
+  comments:
+    threads: false             # flat comments: no replies
+nodes:                         # may be empty in a mode that has config; seed nodes are never inherited
+  - title: Why now?
+    kind: why
+    labels: [backend]          # must be in the mode's labels
+    fields:                    # custom field values
+      effort: 2d
+    lock: children             # children | subtree: blocks add/move/delete below it
+```
+
+Built-in `default` is lean: field `body`, link type `relates-to`, statuses `active` (open),
+`accepted` and `rejected`, threaded comments, no kinds or labels. `feature-planning` and
+`pr-review` extend it (adding pros/cons/rationale, more link types, kinds and, for planning,
+a `pending` status). Every status has a role: `open` (the first one is the default for new
+nodes), `waiting` (shows in the human inbox), `blocked`, `accepted` (choosing an option sets the
+last accepted status on it and the first on its parent), `rejected` (its siblings), `closed`.
+Each mode needs at least one open, accepted and rejected status. Lookup follows the template
+search order; a mode that extends its own name inherits from the next location down (so a
+project `default.yaml` with `extends: default` customizes the built-in for every mode). At most
+8 modes deep; cycles are rejected. A new tree stores its mode name and the fully resolved config,
+so editing or removing the mode later never changes existing trees. Trees created without a mode,
+or before modes had config, keep the original fixed vocabulary.
+
+`dtree config <tree>` or `dtree config --mode <name>` prints the resolved settings.
 
 ## Custom templates
 
@@ -69,3 +123,6 @@ pre-fill options that apply to every tree created from the template.
 
 To turn an existing tree into a project template, click "Save as template" on its overview in
 `dtree serve`, or run `dtree template export <tree> -o x.yaml` then `dtree create-mode <name> --yaml x.yaml`.
+To create or edit a mode in the viewer, click "+ mode": the draft opens like a tree (edit its seed
+nodes as usual) and the right panel lists its settings, each with a "+" row; "Save mode" writes
+`.decisions/templates/<name>.yaml` with only what differs from the parent.
