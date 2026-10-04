@@ -1,6 +1,6 @@
 {
   "name": "decision-tree",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Question-driven decision trees for planning software features, stored as JSON in each app's .decisions/ folder, with a local HTML viewer for humans and agents to collaborate.",
   "author": {
     "name": "Vineet Kothari",
