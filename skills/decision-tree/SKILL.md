@@ -62,7 +62,7 @@ Run from the app root (or pass `-C <app-root>`). Set `DTREE_AUTHOR=<your agent n
 
 ## Templates and custom modes
 
-Templates (also called modes) are YAML files that seed a new tree with questions, options, tasks and notes under the root goal. `dt new --template <name>` (or `--mode <name>`) looks up, first match wins: a file path (argument contains `/` or ends in `.yaml/.yml/.json`), the project's `.decisions/templates/<name>.yaml`, each dir in `$DTREE_TEMPLATES_PATH`, `~/.config/decision-tree/templates/` (`$XDG_CONFIG_HOME`), then the built-ins in this skill's `templates/` (`feature-planning`, `pr-review`). `dt templates` shows every template with its source and which one wins; `dt template show <name>` prints its outline.
+Templates (also called modes) are YAML files that seed a new tree with questions, options, tasks and notes under the root goal. `dt new --template <name>` (or `--mode <name>`) looks up, first match wins: a file path (argument contains `/` or ends in `.yaml/.yml/.json`), the project's `.decisions/templates/<name>.yaml`, each dir in `$DTREE_TEMPLATES_PATH`, `~/.config/decision-tree/templates/` (`$XDG_CONFIG_HOME`), then the built-ins in this skill's `templates/` (`feature-planning`, `planning`, `pr-review`). `dt templates` shows every template with its source and which one wins; `dt template show <name>` prints its outline.
 
 ### Mode config
 
@@ -129,7 +129,7 @@ dt remove-mode custom-planning [--user]                                # project
 
 `create-mode` validates the file (nothing is written on error), forces its `name:` to the mode name, and refuses to overwrite an existing mode without `--force`. To capture a real tree's structure as a template: `dt template export <tree> -o ./custom-planning.yaml` (keeps titles, types, kinds, bodies, pros/cons and nesting; drops statuses, comments and history), then `create-mode` it; humans can do the same from the viewer with "Save as template". `dt init --templates` writes a commented `.decisions/templates/example.yaml`.
 
-Format (`template: 1`): top-level `template`, `name` (= file name), `title`, optional `description`, `tree_status`, and a non-empty `nodes` list; each node has `title` and optional `type` (question default, option, decision, task, note — never goal), `kind` (questions only), `body`, `status`, `assignee`, `pros`/`cons` (options only) and `children`. Only a YAML subset is accepted: comments, mappings, `- ` lists, quoted/plain scalars, one-line `[a, b]` lists, `|`/`>` blocks; anchors, aliases, tags, flow mappings and tabs are rejected with `file:line` errors.
+Format (`template: 1`): top-level `template`, `name` (= file name), `title`, optional `description`, `tree_status`, and a non-empty `nodes` list; each node has `title` and optional `type` (question default, option, decision, task, note, tree — never goal), `kind` (questions only), `body`, `status`, `assignee`, `pros`/`cons` (options only) and `children`. A `type: tree` node with `mode: <name>` is a sub-tree: the nodes below it use that mode's config (seeded from the mode unless it lists `children:`); the tree node itself follows its parent. Add one with `dt add <tree> -p <node> -t tree --mode feature-planning --title "Feature: X"`; moving nodes into or out of a sub-tree is refused if their values don't fit there. Only a YAML subset is accepted: comments, mappings, `- ` lists, quoted/plain scalars, one-line `[a, b]` lists, `|`/`>` blocks; anchors, aliases, tags, flow mappings and tabs are rejected with `file:line` errors.
 
 ## Command reference
 

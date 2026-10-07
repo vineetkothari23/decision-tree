@@ -2,7 +2,7 @@
 
 /** Format versions, vocabularies and limits shared across modules. */
 
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 const SCHEMA_VERSION = 1;
 const DECISIONS_DIR = ".decisions";
 const TOOL_DIR = "_tool";
@@ -10,7 +10,7 @@ const SCRIPT_NAME = "dtree.cjs";
 const LIB_DIR_NAME = "lib";
 const PACKAGE_NAME = "@vineetkothari23/decision-tree";
 
-const NODE_TYPES = { goal: "g", question: "q", option: "o", decision: "d", task: "t", note: "n" };
+const NODE_TYPES = { goal: "g", question: "q", option: "o", decision: "d", task: "t", note: "n", tree: "s" };
 const KINDS = ["why", "what", "how", "where", "who", "when", "risk", "other"];
 const STATUSES = ["open", "exploring", "needs-input", "blocked", "decided", "chosen", "rejected", "deferred", "done"];
 const TREE_STATUSES = ["draft", "active", "decided", "implemented", "archived"];
@@ -31,7 +31,7 @@ const TEMPLATES_DIR = "templates";
 const DRAFTS_DIR = "_drafts";
 const TEMPLATE_KEYS = ["template", "name", "title", "description", "extends", "tree_status", "config", "nodes"];
 const TEMPLATE_NODE_KEYS = [
-  "title", "type", "kind", "body", "status", "assignee", "pros", "cons", "rationale", "labels", "lock", "fields", "children",
+  "title", "type", "mode", "kind", "body", "status", "assignee", "pros", "cons", "rationale", "labels", "lock", "fields", "children",
 ];
 const TEMPLATE_PATH_RE = /[\\/]|\.(ya?ml|json)$/i;
 

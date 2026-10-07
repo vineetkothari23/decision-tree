@@ -153,7 +153,7 @@ class Store {
       if (template && template.resolved_config) tree.config = JSON.parse(JSON.stringify(template.resolved_config));
       const root = addNode(tree, { parent: null, type: "goal", title, body: description, author });
       tree.root_id = root.id;
-      if (template) applyTemplate(tree, template, author);
+      if (template) applyTemplate(tree, template, author, this);
       this.write(tree);
       return tree;
     });

@@ -17,6 +17,7 @@ Templates are an authoring format only: the created tree is stored as normal JSO
 |---|---|---|
 | `default` | The base every mode extends | nothing (config only: body, `relates-to`, active/accepted/rejected) |
 | `feature-planning` | Planning a new feature | why, who, scope, success metrics (needs human sign-off), approach, data/API changes, placement, rollout (feature flag vs. big-bang options), testing, security/privacy risk |
+| `planning` | Planning a project made of several features | a Features question holding one `feature-planning` sub-tree |
 | `pr-review` | Reviewing a pull request | intent, scope, approach, edge cases/error handling, placement, risk, tests, docs, and a `Review verdict` decision with Approve / Request changes / Comment only options |
 
 Seeded questions carry a `body` of prompts telling you what to investigate. They are a starting
@@ -37,7 +38,7 @@ description: |               # optional: tree description when `dtree new` gets 
 tree_status: draft           # optional: draft|active|decided|implemented|archived
 nodes:                       # required, non-empty; attached under the root goal
   - title: Why migrate now?  # required
-    type: question           # optional, default question: question|option|decision|task|note
+    type: question           # optional, default question: question|option|decision|task|note|tree
     kind: why                # optional, questions only: why|what|how|where|who|when|risk|other
     body: |                  # optional prompts or guidance
       - What breaks if we stay?
@@ -106,6 +107,29 @@ so editing or removing the mode later never changes existing trees. Trees create
 or before modes had config, keep the original fixed vocabulary.
 
 `dtree config <tree>` or `dtree config --mode <name>` prints the resolved settings.
+
+## Sub-trees
+
+A node with `type: tree` and `mode: <name>` is a sub-tree: when a tree is created it gets that
+mode's resolved config and, unless it lists its own `children:`, that mode's seed nodes (explicit
+children replace the seeds and are validated against the sub-mode's config). Scope is lexical:
+the sub-tree's config applies only to the nodes below it; the tree node itself follows its parent.
+Nothing from the parent config flows in. Modes that contain themselves, directly or indirectly, or
+nest more than 8 modes deep are rejected.
+
+```yaml
+nodes:
+  - title: Which features make up this project?
+    children:
+      - title: "Feature: Checkout"
+        type: tree
+        mode: feature-planning
+```
+
+Add one later with `dtree add <tree> -p <node> -t tree --mode feature-planning --title "Feature: X"`.
+Moving a node into or out of a sub-tree is refused when its status, kind, fields, labels or links
+don't fit the config there. `dtree review` checks required kinds per scope. Exporting writes a tree
+node as `type: tree`, `mode` and its current children; mode drafts show it collapsed.
 
 ## Custom templates
 

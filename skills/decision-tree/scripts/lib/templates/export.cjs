@@ -25,6 +25,7 @@ function treeToTemplate(tree, name, { parent = null, keepStatus = false } = {}) 
     const type = n.type === "goal" ? "note" : n.type;
     const out = { title: n.title };
     if (type !== "question") out.type = type;
+    if (type === "tree") out.mode = n.mode;
     if (type === "question" && n.kind) out.kind = n.kind;
     if (n.body) out.body = n.body;
     if (type === "option" && n.pros && n.pros.length) out.pros = [...n.pros];

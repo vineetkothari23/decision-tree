@@ -29,6 +29,8 @@ usage: dtree <command> [options]
   add <tree> -p <parent> [-t question|option|decision|task|note] [-k kind] --title T
       [-b body] [-s status] [--pro P]... [--con C]... [--assignee A] [--label L]... [--field id=V]...
       [--lock children|subtree]
+  add <tree> -p <parent> -t tree --mode <name> --title T
+                                              add a sub-tree node seeded from a mode; nodes below it use that mode's config
   update <tree> <node> [--title T] [-b body] [-k kind] [-t type] [-s status] [--pro P]...
       [--con C]... [-r rationale] [--assignee A] [--label L]... [--field id=V]... [--parent new-parent]
                                               (--label replaces the node's labels; --label "" clears them)
@@ -83,6 +85,7 @@ const COMMANDS = {
     opts: {
       parent: { ...S, short: "p" },
       type: { ...S, short: "t" },
+      mode: S,
       kind: { ...S, short: "k" },
       title: S,
       body: { ...S, short: "b" },

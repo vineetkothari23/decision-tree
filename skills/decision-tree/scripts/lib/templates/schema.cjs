@@ -75,10 +75,15 @@ function validateTemplate(data, { label, name = null }) {
     const nodeTitle = text(raw.title, where, "title").trim();
     if (!nodeTitle) fail(where, 'missing required "title"');
     const type = raw.type ?? "question";
-    if (type === "goal") fail(where, 'type "goal" is reserved for the root; use question, option, decision, task or note');
+    if (type === "goal") fail(where, 'type "goal" is reserved for the root; use question, option, decision, task, note or tree');
     if (!Object.keys(NODE_TYPES).includes(type)) {
-      fail(where, `invalid type ${JSON.stringify(type)}; expected one of: question, option, decision, task, note`);
+      fail(where, `invalid type ${JSON.stringify(type)}; expected one of: question, option, decision, task, note, tree`);
     }
+    const mode = raw.mode ?? null;
+    if (type === "tree" && (typeof mode !== "string" || !TEMPLATE_NAME_RE.test(mode))) {
+      fail(where, `a tree node needs "mode": a template name (lowercase letters, digits, '-' and '_'), got ${JSON.stringify(mode)}`);
+    }
+    if (type !== "tree" && mode !== null) fail(where, `"mode" is only allowed on tree nodes (this node is a ${type})`);
     const kind = id(raw.kind, where, "kind");
     if (kind !== null && type !== "question") fail(where, `"kind" is only allowed on questions (this node is a ${type})`);
     for (const key of ["pros", "cons"]) {
@@ -89,6 +94,7 @@ function validateTemplate(data, { label, name = null }) {
     const out = {
       title: nodeTitle,
       type,
+      ...(type === "tree" ? { mode } : {}),
       kind,
       body: text(raw.body, where, "body").replace(/\n+$/, ""),
       status: id(raw.status, where, "status"),
@@ -114,7 +120,8 @@ function validateTemplate(data, { label, name = null }) {
       }
       if (Object.keys(fields).length) out.fields = fields;
     }
-    out.children = list(raw.children, `${where}.children`).map((c, k) => node(c, `${where}.children[${k}]`));
+    const own = type !== "tree" || (raw.children !== undefined && raw.children !== null);
+    out.children = own ? list(raw.children, `${where}.children`).map((c, k) => node(c, `${where}.children[${k}]`)) : null;
     return out;
   };
   const nodes = list(data.nodes, "nodes");
@@ -159,7 +166,7 @@ function checkNodes(nodes, cfg, fail) {
         fail(`${where}.fields`, `field ${JSON.stringify(f)} must be ${cfg.fields[f].type === "list" ? "a list" : "text"}`);
       }
     }
-    walk(n.children, `${where}.children`);
+    if (n.type !== "tree") walk(n.children, `${where}.children`);
   });
   walk(nodes, "nodes");
   return nodes;
@@ -172,6 +179,6 @@ function validateTemplateName(name) {
   return name;
 }
 
-const countTemplateNodes = (nodes) => nodes.reduce((acc, n) => acc + 1 + countTemplateNodes(n.children), 0);
+const countTemplateNodes = (nodes) => nodes.reduce((acc, n) => acc + 1 + countTemplateNodes(n.children || []), 0);
 
 module.exports = { validateTemplate, validateTemplateName, countTemplateNodes, checkNodes, isConfigured, templateFail };
