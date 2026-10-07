@@ -200,6 +200,10 @@ npm run lint
 Releases: bump `version` in `package.json`, `.claude-plugin/plugin.json` and `VERSION` in `scripts/lib/constants.cjs`, then push a `v<version>` tag;
 the publish workflow runs tests and publishes to npm (requires the `NPM_TOKEN` repository secret).
 
+## Release notes
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each version.
+
 ## License
 
 MIT
