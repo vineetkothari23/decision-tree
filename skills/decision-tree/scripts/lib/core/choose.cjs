@@ -1,15 +1,15 @@
 "use strict";
 
-/** Choosing an option: it gets the tree's accepted status, its siblings the rejected one, its question is decided. */
+/** Choosing an option: it gets its scope's accepted status, its siblings the rejected one, its question is decided. */
 
 const { DTError, hasOwn } = require("../util.cjs");
-const { treeConfig } = require("../config/legacy.cjs");
+const { configAt } = require("../config/scope.cjs");
 const { hasRole, chosenStatus, decidedStatus, rejectedStatus } = require("../config/roles.cjs");
 const { getNode, children, updateNode, log } = require("./tree.cjs");
 const { addComment } = require("./comments.cjs");
 
 function chooseOption(tree, oid, rationale, author, rejectSiblings = true) {
-  const cfg = treeConfig(tree);
+  const cfg = configAt(tree, oid);
   const option = getNode(tree, oid);
   if (option.type !== "option") throw new DTError(`${oid} is a ${option.type}, not an option`);
   const why = rationale || "";
@@ -28,7 +28,7 @@ function chooseOption(tree, oid, rationale, author, rejectSiblings = true) {
   }
   if (parent) {
     parent.chosen = oid;
-    updateNode(tree, parent.id, { status: decidedStatus(cfg) }, author);
+    updateNode(tree, parent.id, { status: decidedStatus(configAt(tree, parent.id)) }, author);
   }
   log(tree, author, "choose", oid, why);
   return option;

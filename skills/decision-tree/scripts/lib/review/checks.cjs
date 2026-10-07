@@ -1,29 +1,29 @@
 "use strict";
 
-/** Rigor checks that `dtree review` reports, driven by the tree's config (status roles, fields, required kinds). */
+/** Rigor checks that `dtree review` reports, driven by each node's scope config (status roles, fields, required kinds). */
 
 const { hasOwn } = require("../util.cjs");
 const { children } = require("../core/tree.cjs");
-const { treeConfig } = require("../config/legacy.cjs");
+const { configAt } = require("../config/scope.cjs");
 const { hasRole, isDone, chosenStatus } = require("../config/roles.cjs");
 const { inbox } = require("./inbox.cjs");
 
 /** Gaps an agent should address to make the tree rigorous. */
 function review(tree) {
-  const cfg = treeConfig(tree);
   const issues = [];
   const nodes = Object.values(tree.nodes);
   const root = tree.nodes[tree.root_id];
-  const required = cfg.review.required_kinds;
+  const required = root ? configAt(tree, root.id).review.required_kinds : [];
   if (root && required.length) {
     const kinds = new Set(nodes.filter((n) => n.type === "question").map((n) => n.kind));
     const missing = required.filter((k) => !kinds.has(k));
     if (missing.length) issues.push([root.id, `no ${missing.join("/")} questions asked yet`]);
   }
-  const weighs = hasOwn(cfg.fields, "pros") && hasOwn(cfg.fields, "cons");
-  const explains = hasOwn(cfg.fields, "rationale");
-  const chosen = chosenStatus(cfg);
   for (const n of nodes) {
+    const cfg = configAt(tree, n.id);
+    const weighs = hasOwn(cfg.fields, "pros") && hasOwn(cfg.fields, "cons");
+    const explains = hasOwn(cfg.fields, "rationale");
+    const chosen = chosenStatus(cfg);
     const kids = children(tree, n.id);
     const opts = kids.filter((k) => k.type === "option");
     if (n.type === "question") {
