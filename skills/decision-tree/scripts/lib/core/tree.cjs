@@ -2,12 +2,12 @@
 
 /**
  * Tree data operations: nodes, links and tree metadata, with activity logging.
- * What a tree accepts (statuses, kinds, fields, labels, link types) comes from its config via core/policy.
+ * What a node accepts (statuses, kinds, fields, labels, link types) comes from its scope's config via core/policy.
  */
 
 const { NODE_TYPES, TREE_STATUSES, ACTIVITY_LIMIT } = require("../constants.cjs");
 const { DTError, now, same, choice, hasOwn, isPlainObject } = require("../util.cjs");
-const { treeConfig } = require("../config/legacy.cjs");
+const { configAt, configUnder } = require("../config/scope.cjs");
 const { initialStatus } = require("../config/roles.cjs");
 const { checkStatus, checkKind, linkType } = require("./policy/vocab.cjs");
 const { isEmptyValue, fieldValue, readField, writeField, fieldPath } = require("./policy/fields.cjs");
@@ -42,7 +42,7 @@ function descendants(tree, nid) {
   return out;
 }
 
-/** `{id: value}` for every field given a non-empty value, checked against the tree's config. */
+/** `{id: value}` for every field given a non-empty value, checked against `cfg`. */
 function fieldValues(cfg, values) {
   const out = {};
   for (const [id, v] of Object.entries(values)) if (!isEmptyValue(v)) out[id] = fieldValue(cfg, id, v);
@@ -51,7 +51,7 @@ function fieldValues(cfg, values) {
 
 function addNode(tree, { parent, type = "question", title, body = "", kind = null, status = null, author = null,
   pros = null, cons = null, assignee = "", rationale = "", fields = {}, labels = null, lock = null }) {
-  const cfg = treeConfig(tree);
+  const cfg = configUnder(tree, parent);
   choice(type, Object.keys(NODE_TYPES), "node type");
   const st = checkStatus(cfg, status || initialStatus(cfg));
   const k = type === "question" ? checkKind(cfg, kind) : null;
@@ -99,7 +99,7 @@ function addNode(tree, { parent, type = "question", title, body = "", kind = nul
 
 function updateNode(tree, nid, changes, author) {
   const node = getNode(tree, nid);
-  const cfg = treeConfig(tree);
+  const cfg = configAt(tree, nid);
   const updates = [];
   for (const [key, raw] of Object.entries(changes)) {
     if (raw === undefined || raw === null) continue;
@@ -182,11 +182,11 @@ function deleteNode(tree, nid, author) {
   return [...removed].sort();
 }
 
-/** Links `src` to `dst`; `type` defaults to the tree's first link type. */
+/** Links `src` to `dst`; `type` defaults to the first link type of `src`'s scope. */
 function addLink(tree, src, dst, type, author) {
   const node = getNode(tree, src);
   getNode(tree, dst);
-  const t = linkType(treeConfig(tree), type);
+  const t = linkType(configAt(tree, src), type);
   if (src === dst) throw new DTError("cannot link a node to itself");
   const link = { target: dst, type: t };
   if (!node.links.some((lk) => same(lk, link))) {

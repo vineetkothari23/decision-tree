@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { TEMPLATE_VERSION } = require("../constants.cjs");
 const { children } = require("../core/tree.cjs");
-const { treeConfig } = require("../config/legacy.cjs");
+const { configAt } = require("../config/scope.cjs");
 const { initialStatus } = require("../config/roles.cjs");
 const { diffConfig } = require("../config/sections.cjs");
 const { DTError, isDir, slugify } = require("../util.cjs");
@@ -21,7 +21,6 @@ const { templateNameOf } = require("./lookup.cjs");
  */
 function treeToTemplate(tree, name, { parent = null, keepStatus = false } = {}) {
   validateTemplateName(name);
-  const cfg = treeConfig(tree);
   const conv = (n) => {
     const type = n.type === "goal" ? "note" : n.type;
     const out = { title: n.title };
@@ -30,7 +29,7 @@ function treeToTemplate(tree, name, { parent = null, keepStatus = false } = {}) 
     if (n.body) out.body = n.body;
     if (type === "option" && n.pros && n.pros.length) out.pros = [...n.pros];
     if (type === "option" && n.cons && n.cons.length) out.cons = [...n.cons];
-    if (keepStatus && n.status !== initialStatus(cfg)) out.status = n.status;
+    if (keepStatus && n.status !== initialStatus(configAt(tree, n.id))) out.status = n.status;
     if (keepStatus && n.assignee) out.assignee = n.assignee;
     if (n.labels && n.labels.length) out.labels = [...n.labels];
     if (n.lock) out.lock = n.lock;

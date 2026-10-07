@@ -13,6 +13,7 @@ const { getNode, addNode, updateNode, lockNode, moveNode, deleteNode, addLink, r
 const { chooseOption } = require("../core/choose.cjs");
 const { fieldDef, readField, isBuiltinField } = require("../core/policy/fields.cjs");
 const { treeConfig } = require("../config/legacy.cjs");
+const { configAt, configUnder } = require("../config/scope.cjs");
 const { addComment, resolveComment, threads } = require("../core/comments.cjs");
 const { inbox } = require("../review/inbox.cjs");
 const { review } = require("../review/checks.cjs");
@@ -30,8 +31,7 @@ const { UsageError } = require("./args.cjs");
 const { installSkill } = require("./install-skill.cjs");
 
 /** `--field id=value` options as `{id: value}`; repeating a list field's option appends to it. */
-function fieldOptions(tree, specs = []) {
-  const cfg = treeConfig(tree);
+function fieldOptions(cfg, specs = []) {
   const out = {};
   for (const spec of specs) {
     const at = spec.indexOf("=");
@@ -137,13 +137,14 @@ const STORE_COMMANDS = {
     const node = getNode(tree, a.node);
     const lines = [`[${node.id}] ${node.type} ${node.kind || ""} (${node.status}) parent=${node.parent}`, node.title];
     if (node.body) lines.push("", node.body);
-    for (const [id, def] of Object.entries(treeConfig(tree).fields)) {
+    const cfg = configAt(tree, node.id);
+    for (const [id, def] of Object.entries(cfg.fields)) {
       const value = readField(node, id);
       if (id === "body" || value === undefined || !value.length) continue;
       if (def.type === "list") lines.push(`${id}:`, ...value.map((x) => `  - ${x}`));
       else lines.push(`${id}: ${value}`);
     }
-    for (const [id, value] of Object.entries(node.fields || {})) if (!isBuiltinField(id) && !hasOwn(treeConfig(tree).fields, id)) lines.push(`${id}: ${value}`);
+    for (const [id, value] of Object.entries(node.fields || {})) if (!isBuiltinField(id) && !hasOwn(cfg.fields, id)) lines.push(`${id}: ${value}`);
     if (node.labels && node.labels.length) lines.push(`labels: ${node.labels.join(", ")}`);
     if (node.lock) lines.push(`locked: ${node.lock}`);
     if (node.links.length) lines.push("links: " + node.links.map((lk) => `${lk.type} ${lk.target}`).join(", "));
@@ -223,7 +224,7 @@ const TREE_EDITS = {
       assignee: o.assignee || "",
       labels: o.label,
       lock: o.lock || null,
-      fields: fieldOptions(tree, o.field),
+      fields: fieldOptions(configUnder(tree, o.parent), o.field),
     });
     return [res, `added ${res.id}`];
   },
@@ -242,7 +243,7 @@ const TREE_EDITS = {
       rationale: o.rationale,
       assignee: o.assignee,
       labels: o.label,
-      fields: fieldOptions(tree, o.field),
+      fields: fieldOptions(configAt(tree, a.node), o.field),
     }, author);
     return [res, `updated ${res.id}`];
   },

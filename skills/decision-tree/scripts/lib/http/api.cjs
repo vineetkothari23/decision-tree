@@ -8,7 +8,7 @@
 const { AUTHOR_TYPES } = require("../constants.cjs");
 const { DTError, choice, hasOwn, slugify, validateSlug } = require("../util.cjs");
 const { meta } = require("../config/meta.cjs");
-const { treeConfig } = require("../config/legacy.cjs");
+const { configAt, configUnder } = require("../config/scope.cjs");
 const { NODE_KEYS, addNode, updateNode, lockNode, moveNode, deleteNode, addLink, removeLink, updateTreeMeta } = require("../core/tree.cjs");
 const { chooseOption } = require("../core/choose.cjs");
 const { addComment, resolveComment } = require("../core/comments.cjs");
@@ -31,9 +31,9 @@ function need(body, key) {
   return body[key];
 }
 
-/** The node edits in a request body: node keys, the tree's configured field ids, and `fields`. */
-function nodeChanges(tree, body) {
-  const keys = [...NODE_KEYS, ...Object.keys(treeConfig(tree).fields), "fields"];
+/** The node edits in a request body: node keys, the field ids configured in `cfg`, and `fields`. */
+function nodeChanges(cfg, body) {
+  const keys = [...NODE_KEYS, ...Object.keys(cfg.fields), "fields"];
   return Object.fromEntries(keys.filter((k) => hasOwn(body, k)).map((k) => [k, body[k]]));
 }
 
@@ -51,7 +51,7 @@ const treeRoutes = (coll) => {
       path: `${TREE}/nodes`,
       edit: (tree, { body, author }) => {
         addNode(tree, {
-          ...nodeChanges(tree, body),
+          ...nodeChanges(configUnder(tree, body.parent), body),
           parent: need(body, "parent"),
           type: body.type || "question",
           title: body.title || "",
@@ -70,7 +70,7 @@ const treeRoutes = (coll) => {
         const relock = hasOwn(body, "lock") && body.lock;
         if (hasOwn(body, "lock") && !relock) lockNode(tree, params.node, null, author);
         if (body.parent) moveNode(tree, params.node, body.parent, author);
-        updateNode(tree, params.node, nodeChanges(tree, body), author);
+        updateNode(tree, params.node, nodeChanges(configAt(tree, params.node), body), author);
         if (relock) lockNode(tree, params.node, body.lock, author);
         return tree;
       },

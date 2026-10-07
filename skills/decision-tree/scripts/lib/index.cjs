@@ -10,6 +10,7 @@ const tree = require("./core/tree.cjs");
 const comments = require("./core/comments.cjs");
 const { chooseOption } = require("./core/choose.cjs");
 const { LEGACY_CONFIG, treeConfig } = require("./config/legacy.cjs");
+const { configAt, configUnder, scopeRoot } = require("./config/scope.cjs");
 const { DraftStore } = require("./store/drafts.cjs");
 const { inbox } = require("./review/inbox.cjs");
 const { review } = require("./review/checks.cjs");
@@ -41,7 +42,7 @@ module.exports = {
   TREE_STATUSES: constants.TREE_STATUSES,
   LINK_TYPES: constants.LINK_TYPES,
   AUTHOR_TYPES: constants.AUTHOR_TYPES,
-  LEGACY_CONFIG, treeConfig,
+  LEGACY_CONFIG, treeConfig, configAt, configUnder, scopeRoot,
   DTError, Store, DraftStore, App, findProjectRoot, scanProjects, slugify, validateSlug,
   addNode: tree.addNode,
   updateNode: tree.updateNode,
