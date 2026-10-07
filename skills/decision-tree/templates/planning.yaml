@@ -1,0 +1,19 @@
+# Built-in mode: plan a larger piece of work as a set of features. Each feature is a sub-tree
+# (`type: tree`) that uses the feature-planning mode for everything below it.
+template: 1
+name: planning
+title: Plan a project
+description: |
+  Break a project into features. Each feature is a feature-planning sub-tree with its own
+  why/what/how/where questions; add one per feature under "Features".
+extends: default
+nodes:
+  - title: Which features make up this project?
+    body: |
+      - Add one sub-tree per feature: dtree add <tree> -p <this question> -t tree --mode feature-planning --title "Feature: X"
+      - Link features that depend on each other.
+    children:
+      - title: "Feature: Example"
+        type: tree
+        mode: feature-planning
+        body: Rename or delete this example feature.

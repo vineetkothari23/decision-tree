@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Command handlers. STORE_COMMANDS get (args, store, author); TREE_EDITS get (args, tree, author) inside a
+ * Command handlers. STORE_COMMANDS get (args, store, author); TREE_EDITS get (args, tree, author, store) inside a
  * locked write of tree `args.tree`. Each returns [data, text] for printing, or null when it prints its own output.
  */
 
@@ -23,6 +23,8 @@ const { renderStaticHtml, snapshotPayload } = require("../render/static.cjs");
 const { countTemplateNodes } = require("../templates/schema.cjs");
 const { listTemplates, templateDirs } = require("../templates/lookup.cjs");
 const { resolveTemplate, treeParent } = require("../templates/resolve.cjs");
+const { resolveSubtree, resolveMode } = require("../templates/subtrees.cjs");
+const { addSubtree } = require("../templates/apply.cjs");
 const { exportTemplate } = require("../templates/export.cjs");
 const { createMode, removeMode } = require("../templates/modes.cjs");
 const { App } = require("../http/app.cjs");
@@ -81,7 +83,7 @@ const STORE_COMMANDS = {
     const o = a.values;
     const slug = validateSlug(o.id || slugify(a.title));
     const name = o.template ?? o.mode;
-    const template = name !== undefined ? resolveTemplate(store, name) : null;
+    const template = name !== undefined ? resolveMode(store, name) : null;
     const description = o.description ?? (template ? template.description : "");
     const tree = store.createTree(slug, a.title, description, author, template);
     const seeded = template ? ` and ${countTemplateNodes(template.nodes)} node(s) from template ${template.name}` : "";
@@ -136,6 +138,7 @@ const STORE_COMMANDS = {
     const tree = store.load(a.tree);
     const node = getNode(tree, a.node);
     const lines = [`[${node.id}] ${node.type} ${node.kind || ""} (${node.status}) parent=${node.parent}`, node.title];
+    if (node.mode) lines.push(`mode: ${node.mode}`);
     if (node.body) lines.push("", node.body);
     const cfg = configAt(tree, node.id);
     for (const [id, def] of Object.entries(cfg.fields)) {
@@ -209,11 +212,13 @@ const STORE_COMMANDS = {
 };
 
 const TREE_EDITS = {
-  add(a, tree, author) {
+  add(a, tree, author, store) {
     const o = a.values;
-    const res = addNode(tree, {
+    const type = o.type || (o.mode ? "tree" : "question");
+    if (o.mode && type !== "tree") throw new UsageError("--mode only applies to tree nodes (-t tree)");
+    const node = {
       parent: o.parent,
-      type: o.type || "question",
+      type,
       title: o.title,
       body: o.body || "",
       kind: o.kind || null,
@@ -225,8 +230,11 @@ const TREE_EDITS = {
       labels: o.label,
       lock: o.lock || null,
       fields: fieldOptions(configUnder(tree, o.parent), o.field),
-    });
-    return [res, `added ${res.id}`];
+    };
+    const before = Object.keys(tree.nodes).length;
+    const res = o.mode ? addSubtree(tree, resolveSubtree(store, o.mode), node, author) : addNode(tree, node);
+    const seeded = o.mode ? ` (mode ${o.mode}, ${Object.keys(tree.nodes).length - before} node(s))` : "";
+    return [res, `added ${res.id}${seeded}`];
   },
 
   update(a, tree, author) {
@@ -304,7 +312,7 @@ const TREE_EDITS = {
 
 /** Runs one parsed command against `store`. */
 function run(a, store, author) {
-  if (hasOwn(TREE_EDITS, a.cmd)) return store.edit(a.tree, (tree) => TREE_EDITS[a.cmd](a, tree, author));
+  if (hasOwn(TREE_EDITS, a.cmd)) return store.edit(a.tree, (tree) => TREE_EDITS[a.cmd](a, tree, author, store));
   if (hasOwn(STORE_COMMANDS, a.cmd)) return STORE_COMMANDS[a.cmd](a, store, author);
   throw new UsageError(`unknown command ${JSON.stringify(a.cmd)}`);
 }

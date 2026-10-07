@@ -7,12 +7,13 @@
 
 const { NODE_TYPES, TREE_STATUSES, ACTIVITY_LIMIT } = require("../constants.cjs");
 const { DTError, now, same, choice, hasOwn, isPlainObject } = require("../util.cjs");
-const { configAt, configUnder } = require("../config/scope.cjs");
+const { configAt, configUnder, scopeRoot } = require("../config/scope.cjs");
 const { initialStatus } = require("../config/roles.cjs");
 const { checkStatus, checkKind, linkType } = require("./policy/vocab.cjs");
 const { isEmptyValue, fieldValue, readField, writeField, fieldPath } = require("./policy/fields.cjs");
 const { labelsValue } = require("./policy/labels.cjs");
 const { lockValue, assertUnlocked } = require("./policy/locks.cjs");
+const { nodeConflicts, summarizeConflicts } = require("./policy/conform.cjs");
 
 /** Node keys `updateNode` edits directly; any configured field id is editable too (or via `fields: {id: value}`). */
 const NODE_KEYS = ["title", "kind", "status", "type", "labels"];
@@ -50,9 +51,12 @@ function fieldValues(cfg, values) {
 }
 
 function addNode(tree, { parent, type = "question", title, body = "", kind = null, status = null, author = null,
-  pros = null, cons = null, assignee = "", rationale = "", fields = {}, labels = null, lock = null }) {
+  pros = null, cons = null, assignee = "", rationale = "", fields = {}, labels = null, lock = null, mode = null, config = null }) {
   const cfg = configUnder(tree, parent);
   choice(type, Object.keys(NODE_TYPES), "node type");
+  if (type === "tree" && (!mode || !isPlainObject(config))) {
+    throw new DTError("a tree node needs a mode (dtree add <tree> -p <parent> -t tree --mode <name> --title T)");
+  }
   const st = checkStatus(cfg, status || initialStatus(cfg));
   const k = type === "question" ? checkKind(cfg, kind) : null;
   if (parent !== null && parent !== undefined) {
@@ -92,6 +96,7 @@ function addNode(tree, { parent, type = "question", title, body = "", kind = nul
   for (const [id, v] of Object.entries(values)) writeField(node, id, v);
   if (nodeLabels.length) node.labels = nodeLabels;
   if (nodeLock) node.lock = nodeLock;
+  if (type === "tree") Object.assign(node, { mode: String(mode), config: JSON.parse(JSON.stringify(config)) });
   tree.nodes[nid] = node;
   log(tree, author, "add", nid, `${type}: ${node.title}`);
   return node;
@@ -110,7 +115,10 @@ function updateNode(tree, nid, changes, author) {
       let value = raw;
       if (key === "status") checkStatus(cfg, value);
       else if (key === "kind") value = checkKind(cfg, value || null);
-      else if (key === "type") choice(value, Object.keys(NODE_TYPES), "node type");
+      else if (key === "type") {
+        choice(value, Object.keys(NODE_TYPES), "node type");
+        if ((value === "tree") !== (node.type === "tree")) throw new DTError(`cannot change ${nid} from ${node.type} to ${value}: add a tree node with --mode instead`);
+      }
       else if (key === "labels") value = labelsValue(cfg, value);
       else if (key === "title" && !String(value).trim()) throw new DTError("title cannot be empty");
       updates.push([key, null, value]);
@@ -162,7 +170,18 @@ function moveNode(tree, nid, newParent, author) {
   if (node.parent === newParent) return node;
   assertUnlocked(tree, node.parent, `move ${nid}`);
   assertUnlocked(tree, newParent, `move ${nid} under ${newParent}`);
+  const oldParent = node.parent;
+  const oldScope = scopeRoot(tree, nid);
   node.parent = newParent;
+  const scope = scopeRoot(tree, nid);
+  if (scope !== oldScope) {
+    const cfg = configAt(tree, nid);
+    const bad = descendants(tree, nid).filter((id) => scopeRoot(tree, id) === scope).flatMap((id) => nodeConflicts(tree.nodes[id], cfg));
+    if (bad.length) {
+      node.parent = oldParent;
+      throw new DTError(`cannot move ${nid} under ${newParent}: its values don't fit the config there (${summarizeConflicts(bad)}); change them first`);
+    }
+  }
   node.updated_at = now();
   log(tree, author, "move", nid, `under ${newParent}`);
   return node;

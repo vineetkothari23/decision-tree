@@ -7,7 +7,7 @@
 <link rel="icon" href="data:,">
 <style>
 :root{--bg:#f6f7fb;--panel:#fff;--line:#e3e6ee;--text:#1d2330;--muted:#6b7385;--accent:#4f46e5;
---goal:#7c3aed;--question:#2563eb;--option:#0d9488;--decision:#16a34a;--task:#d97706;--note:#6b7280;}
+--goal:#7c3aed;--question:#2563eb;--option:#0d9488;--decision:#16a34a;--task:#d97706;--note:#6b7280;--tree:#be185d;}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;font:13px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--text);background:var(--bg)}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -40,6 +40,7 @@ header .live.off{color:#f0a3a3}
 .tree-item .b{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:0 6px;border-radius:9px;background:#eef0f5;color:#465066;white-space:nowrap}
 .badge.warn{background:#fff1e0;color:#a55b00}
+.badge.mode{background:#fce7f3;color:#9d174d}
 .badge.agent{background:#e7f0ff;color:#1f4fb5}
 .badge.human{background:#fde9f3;color:#a3215f}
 main{display:flex;flex-direction:column;min-width:0}
@@ -145,7 +146,7 @@ dialog::backdrop{background:rgba(20,24,36,.35)}
 const STATIC = window.DTREE_STATIC || null;
 const RO = !!STATIC;
 if (RO) document.body.classList.add("ro");
-const COLORS = {goal:"var(--goal)",question:"var(--question)",option:"var(--option)",decision:"var(--decision)",task:"var(--task)",note:"var(--note)"};
+const COLORS = {goal:"var(--goal)",question:"var(--question)",option:"var(--option)",decision:"var(--decision)",task:"var(--task)",note:"var(--note)",tree:"var(--tree)"};
 const W = 240, H = 84, GX = 70, GY = 18;
 const S = {projects:[], meta:null, pid:null, slug:null, coll:"trees", tree:null, sel:null, view:localStorage.getItem("dt.view")||"graph",
   q:"", fstatus:"", collapsed:new Set(), zoom:1, panX:40, panY:40, dirty:false, online:true, needFit:true};
@@ -166,12 +167,21 @@ function el(tag, attrs, ...kids){
 }
 const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const cfg = () => (S.tree && S.tree.config) || S.meta.legacy_config;
-const roleOf = st => hasOwn(cfg().statuses, st) ? cfg().statuses[st].role : null;
-const withRole = r => Object.keys(cfg().statuses).filter(st => roleOf(st) === r);
-const statusName = st => hasOwn(cfg().statuses, st) ? cfg().statuses[st].name : st;
-const isChosen = n => n.type === "option" && n.status === withRole("accepted").slice(-1)[0];
+const isScope = n => !!(n && n.type === "tree" && n.config);
+function cfgAt(id){
+  const ns = nodes(), seen = new Set([id]);
+  for (let p = hasOwn(ns, id) ? ns[id].parent : null; p && hasOwn(ns, p) && !seen.has(p); p = ns[p].parent){ seen.add(p); if (isScope(ns[p])) return ns[p].config; }
+  return cfg();
+}
+const cfgUnder = id => isScope(nodes()[id]) ? nodes()[id].config : cfgAt(id);
+const scopes = () => [cfg(), ...Object.values(nodes()).filter(isScope).map(n => n.config)];
+const roleOf = (st, id) => { const C = cfgAt(id); return hasOwn(C.statuses, st) ? C.statuses[st].role : null; };
+const withRole = (r, id) => Object.keys(cfgAt(id).statuses).filter(st => roleOf(st, id) === r);
+const statusName = (st, id) => { const C = id ? cfgAt(id) : scopes().find(c => hasOwn(c.statuses, st)) || cfg(); return hasOwn(C.statuses, st) ? C.statuses[st].name : st; };
+const isChosen = n => n.type === "option" && n.status === withRole("accepted", n.id).slice(-1)[0];
 const fieldVal = (n, id) => S.meta.builtin_fields.includes(id) ? n[id] : (n.fields || {})[id];
-const pill = (st) => el("span", {class:`pill s-${st} r-${roleOf(st)}`, title:statusName(st)}, st);
+const pill = (st, id) => el("span", {class:`pill s-${st} r-${roleOf(st, id)}`, title:statusName(st, id)}, st);
+const modeBadge = n => n.type === "tree" ? el("span", {class:"badge mode", title:`sub-tree: nodes below it use mode ${n.mode}`}, (S.tree.draft ? "uses " : "") + n.mode) : "";
 const typeLabel = n => n.type === "question" && n.kind ? "Q · " + n.kind : n.type;
 const fmt = ts => ts ? new Date(ts).toLocaleString() : "";
 const ago = ts => { if (!ts) return ""; const s=(Date.now()-new Date(ts))/1000;
@@ -196,6 +206,7 @@ async function mutate(method, path, body){
 // ------------------------------------------------------------ helpers on tree
 const nodes = () => S.tree ? S.tree.nodes : {};
 const kids = id => Object.values(nodes()).filter(n => n.parent === id);
+const shownKids = id => S.tree && S.tree.draft && nodes()[id] && nodes()[id].type === "tree" ? [] : kids(id);
 function threadRoot(n, c){
   const byId = new Map(n.comments.map(x => [x.id, x])), seen = new Set([c.id]);
   while (c.reply_to && byId.has(c.reply_to) && !seen.has(c.reply_to)){ c = byId.get(c.reply_to); seen.add(c.id); }
@@ -211,7 +222,7 @@ function waiting(aud){
   const other = aud === "agent" ? "human" : "agent", out = [];
   for (const n of Object.values(nodes())){
     for (const t of threads(n)) if (!t[0].resolved && t[t.length-1].author_type === other) out.push({n, t, kind:"comment"});
-    if (aud === "human" && roleOf(n.status) === "waiting") out.push({n, kind:"needs-input"});
+    if (aud === "human" && roleOf(n.status, n.id) === "waiting") out.push({n, kind:"needs-input"});
   }
   return out;
 }
@@ -318,6 +329,10 @@ function newTreeDialog(p){
   d.showModal(); title.focus();
 }
 
+async function editMode(name){
+  try { const t = await api("POST", `/projects/${S.pid}/drafts`, {name, from:name}); await refreshProjects(); openTree(S.pid, t.id, null, false, "drafts"); }
+  catch(e){ alert(e.message); }
+}
 function modeDialog(p){
   const d = $("#dlg"); d.replaceChildren();
   const name = el("input", {placeholder:"e.g. team-planning"}), base = el("select", {});
@@ -347,7 +362,7 @@ function renderToolbar(){
     el("button", {class: S.view === v ? "on" : "", onclick:() => { S.view = v; localStorage.setItem("dt.view", v); S.needFit = true; renderAll(); }}, v)));
   const search = el("input", {placeholder:"search nodes…", value:S.q, style:{width:"170px"}, oninput:e => { S.q = e.target.value; renderCanvas(); }});
   const fs = el("select", {onchange:e => { S.fstatus = e.target.value; renderCanvas(); }}, el("option", {value:""}, "all statuses"),
-    ...Object.keys(cfg().statuses).map(s => el("option", {value:s, selected:S.fstatus === s}, statusName(s))));
+    ...[...new Set(scopes().flatMap(c => Object.keys(c.statuses)))].map(s => el("option", {value:s, selected:S.fstatus === s}, statusName(s))));
   const tstat = el("select", {disabled:RO, onchange:e => mutate("PATCH", "", {status:e.target.value}), title:"tree status"},
     ...S.meta.tree_statuses.map(s => el("option", {value:s, selected:S.tree.status === s}, s)));
   tstat.style.width = "auto";
@@ -363,7 +378,7 @@ function renderToolbar(){
 function layout(){
   const pos = {}; let slot = 0;
   function walk(id, depth){
-    const ch = S.collapsed.has(id) ? [] : kids(id);
+    const ch = S.collapsed.has(id) ? [] : shownKids(id);
     if (!ch.length){ pos[id] = {x: depth*(W+GX), y: slot*(H+GY)}; slot++; return; }
     ch.forEach(c => walk(c.id, depth+1));
     const ys = ch.map(c => pos[c.id].y);
@@ -390,7 +405,7 @@ function renderCanvas(){
   for (const n of Object.values(nodes())){
     if (!pos[n.id] || !n.parent || !pos[n.parent]) continue;
     const a = pos[n.parent], b = pos[n.id], x1 = a.x+W, y1 = a.y+H/2, x2 = b.x, y2 = b.y+H/2, mx = (x1+x2)/2;
-    const chosen = isChosen(n), rej = roleOf(n.status) === "rejected";
+    const chosen = isChosen(n), rej = roleOf(n.status, n.id) === "rejected";
     path(`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`, chosen ? "#16a34a" : (rej ? "#d4d6dc" : "#b7bdcc"), rej ? "4 4" : null, chosen ? 2.6 : 1.6);
   }
   for (const n of Object.values(nodes())) for (const l of n.links){
@@ -403,13 +418,13 @@ function renderCanvas(){
   world.append(svg);
   for (const n of Object.values(nodes())){
     const p = pos[n.id]; if (!p) continue;
-    const ot = openThreads(n), nk = kids(n.id).length, hit = S.q && matches(n);
-    const card = el("div", {class:`card st-${n.status} rl-${roleOf(n.status)}` + (isChosen(n) ? " chosen" : "") + (S.sel === n.id ? " sel" : "") + (!matches(n) ? " dim" : "") + (hit ? " hit" : ""),
+    const ot = openThreads(n), nk = shownKids(n.id).length, hit = S.q && matches(n);
+    const card = el("div", {class:`card st-${n.status} rl-${roleOf(n.status, n.id)}` + (isChosen(n) ? " chosen" : "") + (S.sel === n.id ? " sel" : "") + (!matches(n) ? " dim" : "") + (hit ? " hit" : ""),
         style:{left:p.x+"px", top:p.y+"px", "--c":COLORS[n.type]}, onclick:e => { e.stopPropagation(); select(n.id); }},
-      el("div", {class:"top"}, typeLabel(n), n.assignee ? el("span", {class:"badge"}, "@"+n.assignee) : null,
+      el("div", {class:"top"}, typeLabel(n), modeBadge(n), n.assignee ? el("span", {class:"badge"}, "@"+n.assignee) : null,
         n.lock ? el("span", {class:"badge", title:`locked (${n.lock}): no nodes can be added, moved or deleted ${n.lock === "children" ? "directly under it" : "anywhere beneath it"}`}, "locked") : null, el("span", {class:"id"}, n.id)),
       el("div", {class:"ttl", title:n.title}, (isChosen(n) ? "★ " : "") + n.title),
-      el("div", {class:"bot"}, pill(n.status), ...(n.labels||[]).map(l => el("span", {class:"lbl"}, l)),
+      el("div", {class:"bot"}, pill(n.status, n.id), ...(n.labels||[]).map(l => el("span", {class:"lbl"}, l)),
         n.comments.length ? el("span", {class:"cm" + (ot ? " open" : "")}, `${n.comments.length} comment${n.comments.length > 1 ? "s" : ""}` + (ot ? ` · ${ot} open` : "")) : null,
         n.links.length ? el("span", {class:"cm"}, `${n.links.length} link${n.links.length > 1 ? "s" : ""}`) : null));
     if (nk) card.append(el("button", {class:"toggle", title: S.collapsed.has(n.id) ? `expand (${nk})` : "collapse",
@@ -421,7 +436,7 @@ function renderCanvas(){
   world._bounds = {w:maxX, h:maxY};
   if (S.needFit){ S.needFit = false; requestAnimationFrame(fit); } else applyTransform();
 }
-function descCount(id){ let c = 0; const st = [id]; while (st.length){ const k = kids(st.pop()); c += k.length; st.push(...k.map(x => x.id)); } return c; }
+function descCount(id){ let c = 0; const st = [id]; while (st.length){ const k = shownKids(st.pop()); c += k.length; st.push(...k.map(x => x.id)); } return c; }
 function applyTransform(){ const w = $("#world"); if (w) w.style.transform = `translate(${S.panX}px,${S.panY}px) scale(${S.zoom})`; }
 function fit(){
   const w = $("#world"), cv = $("#canvas"); if (!w || !w._bounds) return;
@@ -444,12 +459,12 @@ function zoomBy(f, cx, cy){
 function renderOutline(cv){
   const box = el("div", {id:"outline"});
   function walk(id){
-    const n = nodes()[id], nk = kids(id), col = S.collapsed.has(id), ot = openThreads(n);
-    const li = el("li", {}, el("div", {class:`orow st-${n.status} rl-${roleOf(n.status)}` + (S.sel === id ? " sel" : "") + (!matches(n) ? " dim" : ""), style:{"--c":COLORS[n.type]}, onclick:() => select(id)},
+    const n = nodes()[id], nk = shownKids(id), col = S.collapsed.has(id), ot = openThreads(n);
+    const li = el("li", {}, el("div", {class:`orow st-${n.status} rl-${roleOf(n.status, n.id)}` + (S.sel === id ? " sel" : "") + (!matches(n) ? " dim" : ""), style:{"--c":COLORS[n.type]}, onclick:() => select(id)},
       nk.length ? el("span", {style:{cursor:"pointer", width:"14px"}, onclick:e => { e.stopPropagation(); col ? S.collapsed.delete(id) : S.collapsed.add(id); saveCollapsed(); renderCanvas(); }}, col ? "▸" : "▾") : el("span", {style:{width:"14px"}}),
-      el("span", {class:"ty"}, typeLabel(n)), el("span", {class:"tt"}, (isChosen(n) ? "★ " : "") + n.title),
+      el("span", {class:"ty"}, typeLabel(n)), modeBadge(n), el("span", {class:"tt"}, (isChosen(n) ? "★ " : "") + n.title),
       n.comments.length ? el("span", {class:"cm" + (ot ? " open" : "")}, `${n.comments.length} comment${n.comments.length > 1 ? "s" : ""}` + (ot ? ` · ${ot} open` : "")) : null,
-      pill(n.status), el("span", {class:"cm"}, n.id)));
+      pill(n.status, n.id), el("span", {class:"cm"}, n.id)));
     if (nk.length && !col) li.append(el("ul", {}, ...nk.map(c => walk(c.id))));
     return li;
   }
@@ -475,7 +490,7 @@ function renderDetails(){
   const markDirty = () => { S.dirty = true; save.disabled = false; revert.disabled = false; };
   const f = {};
   const field = (key, input) => { f[key] = input; input.addEventListener("input", markDirty); input.addEventListener("change", markDirty); if (RO) input.disabled = true; return input; };
-  const C = cfg();
+  const C = cfgAt(n.id);
   const changes = () => {
     const out = {title:f.title.value, type:f.type.value, status:f.status.value, lock:f.lock.value || null};
     if (f.kind) out.kind = f.kind.value;
@@ -495,17 +510,18 @@ function renderDetails(){
   const labelRow = C.labels.length ? el("div", {}, el("label", {}, "Labels"), ...C.labels.map(l =>
     el("label", {style:{display:"inline-flex", gap:"4px", alignItems:"center", marginRight:"10px", textTransform:"none"}},
       field("l:" + l, el("input", {type:"checkbox", checked:(n.labels||[]).includes(l), style:{width:"auto"}})), l))) : "";
-  const waitStatus = withRole("waiting")[0];
+  const waitStatus = withRole("waiting", n.id)[0];
   const revert = el("button", {disabled:true, onclick:() => { S.dirty = false; renderDetails(); }}, "Revert");
   const parent = n.parent && nodes()[n.parent];
   d.append(
-    el("div", {class:"row tight", style:{gap:"6px"}}, el("span", {class:"pill", style:{background:COLORS[n.type], color:"#fff"}}, typeLabel(n)), el("span", {class:"cm"}, n.id),
+    el("div", {class:"row tight", style:{gap:"6px"}}, el("span", {class:"pill", style:{background:COLORS[n.type], color:"#fff"}}, typeLabel(n)), modeBadge(n), el("span", {class:"cm"}, n.id),
+      S.tree.draft && n.type === "tree" && !RO ? el("a", {href:"#", class:"cm", title:"open this mode in the mode editor", onclick:e => { e.preventDefault(); editMode(n.mode); }}, "edit mode") : "",
       el("span", {style:{flex:1}}), el("button", {class:"small", onclick:() => select(null)}, "✕")),
     parent ? el("div", {class:"cm", style:{marginTop:"6px"}}, "under ", el("a", {href:"#", onclick:e => { e.preventDefault(); select(parent.id); }}, `${parent.id} · ${parent.title}`)) : "",
     el("label", {}, "Title"), field("title", el("input", {value:n.title})),
     el("div", {class:"row"},
-      el("div", {}, el("label", {}, "Status"), field("status", el("select", {}, ...Object.keys(C.statuses).map(s => el("option", {value:s, selected:n.status === s}, statusName(s)))))),
-      el("div", {}, el("label", {}, "Type"), field("type", el("select", {}, ...S.meta.node_types.map(s => el("option", {value:s, selected:n.type === s}, s))))),
+      el("div", {}, el("label", {}, "Status"), field("status", el("select", {}, ...Object.keys(C.statuses).map(s => el("option", {value:s, selected:n.status === s}, statusName(s, n.id)))))),
+      el("div", {}, el("label", {}, "Type"), field("type", el("select", {disabled:n.type === "tree"}, ...S.meta.node_types.filter(s => (s === "tree") === (n.type === "tree")).map(s => el("option", {value:s, selected:n.type === s}, s))))),
       C.kinds.length || n.kind ? el("div", {}, el("label", {}, "Kind"), field("kind", el("select", {}, el("option", {value:""}, "—"), ...C.kinds.map(s => el("option", {value:s, selected:n.kind === s}, s))))) : null,
       el("div", {}, el("label", {}, "Lock"), field("lock", el("select", {title:"children: no nodes added, moved or deleted directly under it; subtree: none anywhere beneath it"},
         el("option", {value:""}, "unlocked"), ...S.meta.locks.map(s => el("option", {value:s, selected:n.lock === s}, s)))))),
@@ -522,9 +538,9 @@ function renderDetails(){
     if (ch) d.append(el("div", {class:"wait", style:{marginTop:"10px", background:"#f0fdf4"}, onclick:() => select(ch.id)}, "★ Chosen: ", el("b", {}, ch.title), ch.rationale ? el("div", {class:"cm prewrap"}, ch.rationale) : null));
   }
   // children
-  const ch = kids(n.id);
+  const ch = shownKids(n.id);
   d.append(el("h3", {}, `Children (${ch.length})` + (n.lock ? ` · locked (${n.lock})` : "")));
-  for (const c of ch) d.append(el("span", {class:"chip", style:{borderLeft:`4px solid ${COLORS[c.type]}`}, onclick:() => select(c.id)}, `${c.id} · ${c.title.slice(0, 40)}`, " ", pill(c.status)));
+  for (const c of ch) d.append(el("span", {class:"chip", style:{borderLeft:`4px solid ${COLORS[c.type]}`}, onclick:() => select(c.id)}, `${c.id} · ${c.title.slice(0, 40)}`, " ", pill(c.status, c.id)));
   d.append(addChildForm(n));
   // links
   d.append(el("h3", {}, `Links (${n.links.length})`));
@@ -559,7 +575,7 @@ function renderThread(n, t){
     el("div", {class:"meta"}, el("span", {class:"who"}, c.author), el("span", {class:"badge " + c.author_type}, c.author_type), el("span", {title:fmt(c.created_at)}, ago(c.created_at)), el("span", {style:{marginLeft:"auto"}}, c.id)),
     el("div", {class:"prewrap"}, c.text)));
   if (!RO){
-    const threaded = cfg().comments.threads;
+    const threaded = cfgAt(n.id).comments.threads;
     const ta = threaded ? el("textarea", {rows:2, placeholder:"Reply…", style:{marginTop:"6px", minHeight:"36px"}}) : "";
     box.append(ta, el("div", {class:"row tight", style:{gap:"6px", marginTop:"5px"}},
       threaded ? el("button", {class:"small", onclick:() => mutate("POST", `/nodes/${n.id}/comments`, {text:ta.value, reply_to:root.id})}, "Reply") : null,
@@ -570,19 +586,23 @@ function renderThread(n, t){
 }
 function addChildForm(n){
   const wrap = el("div", {class:"edit-only", style:{marginTop:"8px"}});
-  const defaults = n.type === "question" ? ["option", "question", "note"] : ["question", "option", "decision", "task", "note"];
+  const defaults = n.type === "question" ? ["option", "question", "note", "tree"] : ["question", "option", "decision", "task", "note", "tree"];
   const form = el("div", {style:{display:"none", border:"1px solid var(--line)", borderRadius:"8px", padding:"8px", marginTop:"6px"}});
   let type = "question";
-  const kinds = cfg().kinds;
+  const kinds = cfgUnder(n.id).kinds;
   const kind = el("select", {}, el("option", {value:""}, "kind —"), ...kinds.map(k => el("option", {value:k}, k)));
+  const mode = el("select", {title:"mode: nodes below the sub-tree use its config"});
+  const loadModes = () => { if (!mode.options.length) api("GET", `/projects/${S.pid}/templates`).then(rows =>
+    mode.replaceChildren(...rows.filter(r => r.active && !r.error).map(r => el("option", {value:r.name}, `mode: ${r.name}`)))).catch(e => alert(e.message)); };
   const title = el("input", {placeholder:"title"}), body = el("textarea", {rows:2, placeholder:"details (optional)"});
   const hdr = el("b", {});
-  form.append(hdr, el("div", {class:"row", style:{marginTop:"6px"}}, kind), el("div", {style:{marginTop:"6px"}}, title), el("div", {style:{marginTop:"6px"}}, body),
+  form.append(hdr, el("div", {class:"row", style:{marginTop:"6px"}}, kind), el("div", {class:"row", style:{marginTop:"6px"}}, mode), el("div", {style:{marginTop:"6px"}}, title), el("div", {style:{marginTop:"6px"}}, body),
     el("div", {class:"row tight", style:{gap:"6px", marginTop:"6px"}},
-      el("button", {class:"primary", onclick:async () => { if (await mutate("POST", "/nodes", {parent:n.id, type, kind:type === "question" ? kind.value : "", title:title.value, body:body.value})) {} }}, "Add"),
+      el("button", {class:"primary", onclick:async () => { if (await mutate("POST", "/nodes", {parent:n.id, type, kind:type === "question" ? kind.value : "", title:title.value, body:body.value, ...(type === "tree" ? {mode:mode.value} : {})})) {} }}, "Add"),
       el("button", {onclick:() => form.style.display = "none"}, "Cancel")));
   wrap.append(el("div", {class:"row tight", style:{gap:"5px", flexWrap:"wrap"}}, ...defaults.map(t => el("button", {class:"small", onclick:() => {
-    type = t; hdr.textContent = `New ${t} under ${n.id}`; kind.parentElement.style.display = t === "question" && kinds.length ? "" : "none"; form.style.display = "block"; title.focus(); }}, "+ " + t))), form);
+    type = t; hdr.textContent = `New ${t} under ${n.id}`; kind.parentElement.style.display = t === "question" && kinds.length ? "" : "none";
+    mode.parentElement.style.display = t === "tree" ? "" : "none"; if (t === "tree") loadModes(); form.style.display = "block"; title.focus(); }}, "+ " + t))), form);
   return wrap;
 }
 function renderOverview(d){
@@ -599,13 +619,13 @@ function renderOverview(d){
     for (const it of items){
       const last = it.t && it.t[it.t.length-1];
       d.append(el("div", {class:"wait", onclick:() => select(it.n.id)},
-        el("div", {}, el("b", {}, it.n.id), " · ", it.n.title, " ", it.kind === "needs-input" ? pill(it.n.status) : null),
+        el("div", {}, el("b", {}, it.n.id), " · ", it.n.title, " ", it.kind === "needs-input" ? pill(it.n.status, it.n.id) : null),
         last ? el("div", {class:"cm prewrap"}, `${last.author}: ${last.text.slice(0, 160)}`) : null));
     }
   };
   sec("Waiting on humans", waiting("human"), "Nothing needs a human right now.");
   sec("Waiting on agents", waiting("agent"), "No unanswered human comments.");
-  const openQ = Object.values(t.nodes).filter(n => n.type === "question" && ["open", "blocked"].includes(roleOf(n.status)));
+  const openQ = Object.values(t.nodes).filter(n => n.type === "question" && ["open", "blocked"].includes(roleOf(n.status, n.id)));
   sec("Open questions", openQ.map(n => ({n})), "All questions are resolved.");
   d.append(el("p", {class:"cm", style:{marginTop:"18px"}}, "Click a node to see details, discuss, change status or add children. Drag to pan, scroll to zoom."));
 }

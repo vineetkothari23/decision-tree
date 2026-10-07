@@ -11,6 +11,7 @@ const { parseYaml, stringifyYaml } = require("../yaml.cjs");
 const { validateTemplate, validateTemplateName, countTemplateNodes } = require("./schema.cjs");
 const { readTemplateFile, templateFiles, listTemplates } = require("./lookup.cjs");
 const { withConfig, treeParent } = require("./resolve.cjs");
+const { expandSubtrees } = require("./subtrees.cjs");
 const { treeToTemplate } = require("./export.cjs");
 
 function modeDir(store, user) {
@@ -18,7 +19,11 @@ function modeDir(store, user) {
 }
 
 /** Validates template data as it would be saved at `dest`, including its inheritance chain. */
-const validateMode = (store, data, { label, name, dest }) => withConfig(store, { ...validateTemplate(data, { label, name }), path: dest });
+function validateMode(store, data, { label, name, dest }) {
+  const tpl = withConfig(store, { ...validateTemplate(data, { label, name }), path: dest });
+  expandSubtrees(store, tpl);
+  return tpl;
+}
 
 /** Validates a YAML/JSON template file and saves it as `<name>.yaml` in the project (or user) template dir. */
 function createMode(store, name, file, { user = false, force = false } = {}) {

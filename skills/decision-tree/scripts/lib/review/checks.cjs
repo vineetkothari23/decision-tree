@@ -4,7 +4,7 @@
 
 const { hasOwn } = require("../util.cjs");
 const { children } = require("../core/tree.cjs");
-const { configAt } = require("../config/scope.cjs");
+const { isScope, configAt, configUnder, scopeRoot } = require("../config/scope.cjs");
 const { hasRole, isDone, chosenStatus } = require("../config/roles.cjs");
 const { inbox } = require("./inbox.cjs");
 
@@ -12,12 +12,12 @@ const { inbox } = require("./inbox.cjs");
 function review(tree) {
   const issues = [];
   const nodes = Object.values(tree.nodes);
-  const root = tree.nodes[tree.root_id];
-  const required = root ? configAt(tree, root.id).review.required_kinds : [];
-  if (root && required.length) {
-    const kinds = new Set(nodes.filter((n) => n.type === "question").map((n) => n.kind));
+  for (const scope of [tree.nodes[tree.root_id], ...nodes.filter(isScope)].filter(Boolean)) {
+    const required = configUnder(tree, scope.id).review.required_kinds;
+    const asked = nodes.filter((n) => n.type === "question" && scopeRoot(tree, n.id) === scope.id);
+    const kinds = new Set(asked.map((n) => n.kind));
     const missing = required.filter((k) => !kinds.has(k));
-    if (missing.length) issues.push([root.id, `no ${missing.join("/")} questions asked yet`]);
+    if (missing.length) issues.push([scope.id, `no ${missing.join("/")} questions asked yet`]);
   }
   for (const n of nodes) {
     const cfg = configAt(tree, n.id);

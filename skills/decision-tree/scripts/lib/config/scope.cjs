@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Lexical config scope. A node of type `tree` with a `config` scopes its descendants; the tree node itself follows
+ * Lexical config scope. A node of type `tree` with a `config` (a sub-tree) scopes its descendants; the tree node itself follows
  * its parent's scope. The file root is the implicit outermost scope (tree.config, or the legacy config).
  */
 
@@ -36,4 +36,4 @@ function configUnder(tree, parentId) {
   return isScope(parent) ? parent.config : configAt(tree, parentId);
 }
 
-module.exports = { configAt, configUnder, scopeRoot };
+module.exports = { isScope, configAt, configUnder, scopeRoot };
