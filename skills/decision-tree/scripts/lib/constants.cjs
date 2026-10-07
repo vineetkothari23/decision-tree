@@ -2,7 +2,7 @@
 
 /** Format versions, vocabularies and limits shared across modules. */
 
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 const SCHEMA_VERSION = 1;
 const DECISIONS_DIR = ".decisions";
 const TOOL_DIR = "_tool";
