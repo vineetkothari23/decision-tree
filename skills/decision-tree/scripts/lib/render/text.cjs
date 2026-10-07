@@ -21,7 +21,7 @@ function renderText(tree, showBody = false) {
     if (n.labels && n.labels.length) marks.push(n.labels.map((l) => `#${l}`).join(" "));
     if (n.lock) marks.push(`locked: ${n.lock}`);
     const tail = marks.length ? `  <${marks.join("; ")}>` : "";
-    return `[${n.id}] ${n.type} ${kind}${n.title}  (${n.status})${tail}`;
+    return `[${n.id}] ${n.type}${n.mode ? `:${n.mode}` : ""} ${kind}${n.title}  (${n.status})${tail}`;
   };
   const walk = (nid, prefix, last, top) => {
     const n = tree.nodes[nid];
@@ -69,11 +69,11 @@ function renderTemplate(tpl) {
       const pad = "  ".repeat(depth);
       const kind = n.kind ? `${n.kind.toUpperCase()}: ` : "";
       const extra = [n.status !== initialStatus(cfg) ? n.status : "", ...(n.labels || []).map((l) => `#${l}`), n.lock ? `locked: ${n.lock}` : "", n.assignee ? `@${n.assignee}` : ""].filter(Boolean).join(", ");
-      lines.push(`${pad}- ${n.type} ${kind}${n.title}${extra ? `  (${extra})` : ""}`);
+      lines.push(`${pad}- ${n.type}${n.mode ? `:${n.mode}` : ""} ${kind}${n.title}${extra ? `  (${extra})` : ""}`);
       for (const l of n.body.replace(/\n+$/, "").split("\n")) if (n.body) lines.push(`${pad}    │ ${l}`);
       if (n.pros.length) lines.push(`${pad}    pros: ${n.pros.join("; ")}`);
       if (n.cons.length) lines.push(`${pad}    cons: ${n.cons.join("; ")}`);
-      walk(n.children, depth + 1);
+      walk(n.children || [], depth + 1);
     }
   };
   walk(tpl.nodes, 0);

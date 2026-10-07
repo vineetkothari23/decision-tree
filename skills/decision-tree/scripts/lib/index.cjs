@@ -10,7 +10,7 @@ const tree = require("./core/tree.cjs");
 const comments = require("./core/comments.cjs");
 const { chooseOption } = require("./core/choose.cjs");
 const { LEGACY_CONFIG, treeConfig } = require("./config/legacy.cjs");
-const { configAt, configUnder, scopeRoot } = require("./config/scope.cjs");
+const { isScope, configAt, configUnder, scopeRoot } = require("./config/scope.cjs");
 const { DraftStore } = require("./store/drafts.cjs");
 const { inbox } = require("./review/inbox.cjs");
 const { review } = require("./review/checks.cjs");
@@ -21,8 +21,9 @@ const { parseYaml, stringifyYaml } = require("./yaml.cjs");
 const { validateTemplate } = require("./templates/schema.cjs");
 const { loadTemplate, listTemplates, templateDirs } = require("./templates/lookup.cjs");
 const { resolveTemplate } = require("./templates/resolve.cjs");
+const { resolveSubtree, expandSubtrees, resolveMode } = require("./templates/subtrees.cjs");
 const { openDraft, setDraftConfig, saveDraft } = require("./templates/drafts.cjs");
-const { applyTemplate } = require("./templates/apply.cjs");
+const { applyTemplate, applyNodes, addSubtree } = require("./templates/apply.cjs");
 const { treeToTemplate, exportTemplate } = require("./templates/export.cjs");
 const { createMode, saveTreeAsMode, removeMode } = require("./templates/modes.cjs");
 const { builtinTemplatesDir, userTemplatesDir } = require("./paths.cjs");
@@ -42,7 +43,7 @@ module.exports = {
   TREE_STATUSES: constants.TREE_STATUSES,
   LINK_TYPES: constants.LINK_TYPES,
   AUTHOR_TYPES: constants.AUTHOR_TYPES,
-  LEGACY_CONFIG, treeConfig, configAt, configUnder, scopeRoot,
+  LEGACY_CONFIG, treeConfig, isScope, configAt, configUnder, scopeRoot,
   DTError, Store, DraftStore, App, findProjectRoot, scanProjects, slugify, validateSlug,
   addNode: tree.addNode,
   updateNode: tree.updateNode,
@@ -60,7 +61,7 @@ module.exports = {
   inbox, review, summarize, renderText, renderStaticHtml, snapshotPayload,
   createServer, installSkill, parseCli, main,
   parseYaml, stringifyYaml, validateTemplate, loadTemplate, resolveTemplate, listTemplates, templateDirs,
-  applyTemplate, treeToTemplate, exportTemplate, renderTemplate, createMode, saveTreeAsMode, removeMode,
+  resolveMode, resolveSubtree, expandSubtrees, applyTemplate, applyNodes, addSubtree, treeToTemplate, exportTemplate, renderTemplate, createMode, saveTreeAsMode, removeMode,
   openDraft, setDraftConfig, saveDraft,
   builtinTemplatesDir, userTemplatesDir,
 };

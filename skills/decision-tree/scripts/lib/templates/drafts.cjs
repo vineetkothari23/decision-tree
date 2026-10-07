@@ -9,12 +9,15 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { TEMPLATES_DIR } = require("../constants.cjs");
-const { DTError, hasOwn } = require("../util.cjs");
+const { DTError } = require("../util.cjs");
 const { log } = require("../core/tree.cjs");
 const { parseConfig, mergeConfig, finalizeConfig, configFail } = require("../config/sections.cjs");
 const { validateTemplateName } = require("./schema.cjs");
 const { DEFAULT_MODE, resolveTemplate, inheritedConfig } = require("./resolve.cjs");
 const { saveTreeAsMode } = require("./modes.cjs");
+const { expandSubtrees } = require("./subtrees.cjs");
+const { scopeRoot } = require("../config/scope.cjs");
+const { nodeConflicts, summarizeConflicts } = require("../core/policy/conform.cjs");
 
 const projectModesDir = (store) => path.join(store.dir, TEMPLATES_DIR);
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -29,7 +32,7 @@ function openDraft(store, drafts, { name, from = null, parent = null, reset = fa
   let tpl;
   let ext;
   if (from) {
-    tpl = resolveTemplate(store, from, { allowPath: false });
+    tpl = expandSubtrees(store, resolveTemplate(store, from, { allowPath: false }), { seed: false });
     ext = tpl.resolved_config ? tpl.extends || DEFAULT_MODE : null;
   } else {
     ext = parent || DEFAULT_MODE;
@@ -45,24 +48,9 @@ function openDraft(store, drafts, { name, from = null, parent = null, reset = fa
   });
 }
 
-/** Problems that would make `tree`'s nodes invalid under `cfg`. */
-function conflicts(tree, cfg) {
-  const out = [];
-  for (const n of Object.values(tree.nodes)) {
-    if (!hasOwn(cfg.statuses, n.status)) out.push(`${n.id} has status ${JSON.stringify(n.status)}`);
-    if (n.kind && !cfg.kinds.includes(n.kind)) out.push(`${n.id} has kind ${JSON.stringify(n.kind)}`);
-    for (const l of n.labels || []) if (!cfg.labels.includes(l)) out.push(`${n.id} has label ${JSON.stringify(l)}`);
-    for (const f of ["body", "pros", "cons", "rationale", "assignee"]) {
-      if (n[f] && n[f].length && !hasOwn(cfg.fields, f)) out.push(`${n.id} uses field ${JSON.stringify(f)}`);
-    }
-    for (const [f, v] of Object.entries(n.fields || {})) {
-      if (!hasOwn(cfg.fields, f)) out.push(`${n.id} uses field ${JSON.stringify(f)}`);
-      else if ((cfg.fields[f].type === "list") !== Array.isArray(v)) out.push(`${n.id} has a ${Array.isArray(v) ? "list" : "text"} value for ${JSON.stringify(f)}`);
-    }
-    for (const lk of n.links) if (!hasOwn(cfg.link_types, lk.type)) out.push(`${n.id} has a ${JSON.stringify(lk.type)} link`);
-  }
-  return out;
-}
+/** Problems that would make the nodes in `tree`'s file scope (not inside sub-trees) invalid under `cfg`. */
+const conflicts = (tree, cfg) =>
+  Object.values(tree.nodes).filter((n) => scopeRoot(tree, n.id) === tree.root_id).flatMap((n) => nodeConflicts(n, cfg));
 
 /** Replaces a draft's whole `config` and/or its parent (`extends`); refused if existing nodes would stop conforming. */
 function setDraftConfig(store, tree, { config, extends: ext }, author) {
@@ -80,7 +68,7 @@ function setDraftConfig(store, tree, { config, extends: ext }, author) {
   }
   const bad = conflicts(tree, next);
   if (bad.length) {
-    throw new DTError(`config change would leave nodes invalid: ${bad.slice(0, 5).join("; ")}${bad.length > 5 ? ` (+${bad.length - 5} more)` : ""}`);
+    throw new DTError(`config change would leave nodes invalid: ${summarizeConflicts(bad)}`);
   }
   tree.config = next;
   if (ext !== undefined) tree.draft.extends = ext;
