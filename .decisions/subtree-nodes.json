@@ -1,0 +1,1658 @@
+{
+  "schema_version": 1,
+  "id": "subtree-nodes",
+  "title": "Sub-tree nodes: a node of type tree that inherits another mode",
+  "description": "planning contains tree nodes made from feature-planning; each sub-tree is copied inline and its mode's config applies only below it.",
+  "status": "draft",
+  "created_at": "2026-10-06T02:43:24Z",
+  "updated_at": "2026-10-06T14:05:24Z",
+  "created_by": {
+    "name": "devin",
+    "type": "agent"
+  },
+  "revision": 36,
+  "next_id": 30,
+  "root_id": "g1",
+  "nodes": {
+    "g1": {
+      "id": "g1",
+      "type": "goal",
+      "kind": null,
+      "title": "Sub-tree nodes: a node of type tree that inherits another mode",
+      "body": "Model (Vineet): a sub-tree is a tree stored inline. `planning` extends `default`; it can contain nodes of type `tree` that use `feature-planning`. The two modes are edited separately. When a tree is created, the whole template is resolved and every sub-tree is copied into the planning file, nested under its tree node.\nScope works like Python indentation: a tree node's config (statuses, kinds, fields, labels, link types) applies only to the nodes below it. Nothing from the parent config flows down (for now).\n\nTemplate:\n```yaml\ntemplate: 1\nname: planning\nnodes:\n  - title: Features\n    children:\n      - type: tree\n        mode: feature-planning\n        title: \"Feature: Checkout\"\n```\nTree JSON (one file):\n```json\n\"s7\":  {\"type\": \"tree\", \"mode\": \"feature-planning\", \"config\": {...resolved...}, \"title\": \"Feature: Checkout\", \"parent\": \"q3\"},\n\"q8\":  {\"type\": \"question\", \"kind\": \"why\", \"title\": \"Why build this?\", \"parent\": \"s7\"}\n```\nThe only difference from a tree file is where it lives: a tree node holds the `mode` + resolved `config` that a tree file holds at top level. Everything else (ids, activity, revision) is the host file's.",
+      "status": "active",
+      "parent": null,
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T02:43:24Z",
+          "by": {
+            "name": "devin",
+            "type": "agent"
+          },
+          "field": "body",
+          "from": "planning contains tree nodes made from feature-planning; each sub-tree is copied inline and its mode's config applies only below it.",
+          "to": "Model (Vineet): a sub-tree is a tree stored inline. `planning` extends `default`; it can contain nodes of type `tree` that use `feature-planning`. The two modes are edited separately. When a tree is created, the whole template is resolved and every sub-tree is copied into the planning file, nested under its tree node.\nScope works like Python indentation: a tree node's config (statuses, kinds, fields, labels, link types) applies only to the nodes below it. Nothing from the parent config flows down (for now).\n\nTemplate:\n```yaml\ntemplate: 1\nname: planning\nnodes:\n  - title: Features\n    children:\n      - type: tree\n        mode: feature-planning\n        title: \"Feature: Checkout\"\n```\nTree JSON (one file):\n```json\n\"s7\":  {\"type\": \"tree\", \"mode\": \"feature-planning\", \"config\": {...resolved...}, \"title\": \"Feature: Checkout\", \"parent\": \"q3\"},\n\"q8\":  {\"type\": \"question\", \"kind\": \"why\", \"title\": \"Why build this?\", \"parent\": \"s7\"}\n```\nThe only difference from a tree file is where it lives: a tree node holds the `mode` + resolved `config` that a tree file holds at top level. Everything else (ids, activity, revision) is the host file's."
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:24Z",
+      "updated_at": "2026-10-06T02:43:24Z"
+    },
+    "q2": {
+      "id": "q2",
+      "type": "question",
+      "kind": "why",
+      "title": "Why build this, and why now?",
+      "body": "A plan holds several features, and each feature should be planned with the same feature-planning questions and vocabulary, while the plan level keeps its own (lean) vocabulary. Copy-pasting questions, or forcing one merged config on the whole plan, does neither.",
+      "status": "active",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T02:43:24Z",
+          "by": {
+            "name": "devin",
+            "type": "agent"
+          },
+          "field": "body",
+          "from": "- What problem does it solve, and what evidence shows it is real (tickets, data, requests)?\n- What happens if we do nothing, or do it next quarter?\n- Is this the root problem, or a symptom of something cheaper to fix?",
+          "to": "A plan holds several features, and each feature should be planned with the same feature-planning questions and vocabulary, while the plan level keeps its own (lean) vocabulary. Copy-pasting questions, or forcing one merged config on the whole plan, does neither."
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:24Z",
+      "updated_at": "2026-10-06T02:43:24Z"
+    },
+    "q3": {
+      "id": "q3",
+      "type": "question",
+      "kind": "who",
+      "title": "Who uses it, and who has a stake in it?",
+      "body": "Mode authors composing modes; agents creating a plan and adding a sub-tree per feature (`dtree add -t tree --mode feature-planning`); humans reviewing the whole plan on one page.",
+      "status": "active",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T02:43:24Z",
+          "by": {
+            "name": "devin",
+            "type": "agent"
+          },
+          "field": "body",
+          "from": "- Which user segments or roles are affected, and how many?\n- Who owns the decision, who reviews it, who supports it after launch?\n- Which other teams or services depend on the parts we touch?",
+          "to": "Mode authors composing modes; agents creating a plan and adding a sub-tree per feature (`dtree add -t tree --mode feature-planning`); humans reviewing the whole plan on one page."
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:24Z",
+      "updated_at": "2026-10-06T02:43:24Z"
+    },
+    "q4": {
+      "id": "q4",
+      "type": "question",
+      "kind": "what",
+      "title": "What is in scope, and what is explicitly out?",
+      "body": "In: node type `tree` with `mode:` in templates and at runtime; recursive resolution at tree creation (a sub-mode can itself contain tree nodes; cycle + depth 8 checks); config scoped to the tree node's descendants; CLI/API/viewer use the config of the node's scope; mode editor shows tree nodes collapsed (title + mode badge + \"edit feature-planning\" link), never the sub-mode's nodes.\nOut (for now): parent config flowing into sub-trees; syncing existing sub-trees when the sub-mode is edited later (copies, like trees today); sub-trees in separate files.",
+      "status": "active",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T02:43:24Z",
+          "by": {
+            "name": "devin",
+            "type": "agent"
+          },
+          "field": "body",
+          "from": "- List the smallest version that delivers the outcome; everything else is out or later.\n- Which edge cases, platforms, locales or plans are excluded on purpose?\n- What existing behavior must not change?",
+          "to": "In: node type `tree` with `mode:` in templates and at runtime; recursive resolution at tree creation (a sub-mode can itself contain tree nodes; cycle + depth 8 checks); config scoped to the tree node's descendants; CLI/API/viewer use the config of the node's scope; mode editor shows tree nodes collapsed (title + mode badge + \"edit feature-planning\" link), never the sub-mode's nodes.\nOut (for now): parent config flowing into sub-trees; syncing existing sub-trees when the sub-mode is edited later (copies, like trees today); sub-trees in separate files."
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:24Z",
+      "updated_at": "2026-10-06T02:43:24Z"
+    },
+    "q5": {
+      "id": "q5",
+      "type": "question",
+      "kind": "what",
+      "title": "What does success look like, and how is it measured?",
+      "body": "1) `dtree new --mode planning` gives one file where questions under each feature use feature-planning's statuses/kinds and plan-level nodes use planning's.\n2) `dtree review` checks each scope against its own required kinds.\n3) Existing trees, modes and all tests unchanged.\n4) Mechanical change: `treeConfig(tree)` becomes `configAt(tree, nodeId)` at ~15 call sites; no new branches in core.",
+      "status": "pending",
+      "parent": "q4",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "human",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T02:43:24Z",
+          "by": {
+            "name": "devin",
+            "type": "agent"
+          },
+          "field": "body",
+          "from": "- Propose 1-3 measurable metrics with a baseline and target.\n- How and where is each metric collected, and when is it reviewed?\n- What result would make us roll back or abandon the feature?",
+          "to": "1) `dtree new --mode planning` gives one file where questions under each feature use feature-planning's statuses/kinds and plan-level nodes use planning's.\n2) `dtree review` checks each scope against its own required kinds.\n3) Existing trees, modes and all tests unchanged.\n4) Mechanical change: `treeConfig(tree)` becomes `configAt(tree, nodeId)` at ~15 call sites; no new branches in core."
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:24Z",
+      "updated_at": "2026-10-06T02:43:24Z"
+    },
+    "q6": {
+      "id": "q6",
+      "type": "question",
+      "kind": "how",
+      "title": "How should we build it?",
+      "body": "One new idea, lexical config scope; everything else is reuse.",
+      "status": "active",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T02:43:24Z",
+          "by": {
+            "name": "devin",
+            "type": "agent"
+          },
+          "field": "body",
+          "from": "- Compare at least two approaches, including build vs. buy/reuse an existing library or service.\n- Which existing patterns in the codebase does each approach follow or break?\n- Rough effort, maintenance cost, and reversibility of each.",
+          "to": "One new idea, lexical config scope; everything else is reuse."
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:24Z",
+      "updated_at": "2026-10-06T02:43:24Z"
+    },
+    "q7": {
+      "id": "q7",
+      "type": "question",
+      "kind": "how",
+      "title": "What data model and API changes are needed?",
+      "body": "Node: `type: \"tree\"` (id prefix `s`), `mode`, `config` (resolved copy, written once at creation). Tree files are untouched; the file root behaves like an implicit tree node (tree.config).\nScope: the tree node itself follows its parent's config; its descendants follow its own.\nTemplate node: `type: tree` + `mode:`; optional `children:` replace the mode's seed nodes.\nRuntime: `dtree add T -p <node> -t tree --mode feature-planning --title \"Feature: X\"` = resolve the mode, add the tree node, seed its nodes under it. API: `POST .../nodes` with `type: \"tree\", mode`.\nLinks: type checked in the source node's scope; no other rule.\nExport/save as template: tree nodes are written as `type: tree`, `mode`, and their current children.",
+      "status": "active",
+      "parent": "q6",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T02:43:24Z",
+          "by": {
+            "name": "devin",
+            "type": "agent"
+          },
+          "field": "body",
+          "from": "- New or changed tables, fields, events, config; are any migrations destructive?\n- New or changed endpoints, payloads, or public interfaces; are they backwards compatible?\n- Who else consumes these contracts, and how are they versioned?",
+          "to": "Node: `type: \"tree\"` (id prefix `s`), `mode`, `config` (resolved copy, written once at creation). Tree files are untouched.\nTemplate node keys: `type: tree` + `mode:`; no `children:` under it (they come from the mode).\nRuntime: `dtree add T -p <node> -t tree --mode feature-planning --title \"Feature: X\"` = resolve the mode, add the tree node, seed its nodes under it. API: `POST .../nodes` with `type: \"tree\", mode`.\nExport/save as template: a tree node exports as `{type: tree, mode, title}`."
+        },
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "devin",
+            "type": "agent"
+          },
+          "field": "body",
+          "from": "Node: `type: \"tree\"` (id prefix `s`), `mode`, `config` (resolved copy, written once at creation). Tree files are untouched.\nTemplate node keys: `type: tree` + `mode:`; no `children:` under it (they come from the mode).\nRuntime: `dtree add T -p <node> -t tree --mode feature-planning --title \"Feature: X\"` = resolve the mode, add the tree node, seed its nodes under it. API: `POST .../nodes` with `type: \"tree\", mode`.\nExport/save as template: a tree node exports as `{type: tree, mode, title}`.",
+          "to": "Node: `type: \"tree\"` (id prefix `s`), `mode`, `config` (resolved copy, written once at creation). Tree files are untouched; the file root behaves like an implicit tree node (tree.config).\nScope: the tree node itself follows its parent's config; its descendants follow its own.\nTemplate node: `type: tree` + `mode:`; optional `children:` replace the mode's seed nodes.\nRuntime: `dtree add T -p <node> -t tree --mode feature-planning --title \"Feature: X\"` = resolve the mode, add the tree node, seed its nodes under it. API: `POST .../nodes` with `type: \"tree\", mode`.\nLinks: type checked in the source node's scope; no other rule.\nExport/save as template: tree nodes are written as `type: tree`, `mode`, and their current children."
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:24Z",
+      "updated_at": "2026-10-06T14:05:24Z"
+    },
+    "q8": {
+      "id": "q8",
+      "type": "question",
+      "kind": "where",
+      "title": "Where does it live in the codebase and architecture?",
+      "body": "config/scope.cjs (new): `configAt(tree, nid)`, `scopeRoot(tree, nid)`.\ncore/tree.cjs, choose, comments, api, cli: swap `treeConfig(tree)` -> `configAt(tree, <node>)`.\ntemplates/apply.cjs: extract `applyNodes(tree, nodes, parent)`; a `type: tree` node resolves its mode (resolve.cjs) and recurses; cycle/depth guard next to the extends one.\ntemplates/schema.cjs: `mode` key, `tree` type.\nreview/{checks,inbox,summary}: iterate per scope (root goal + each tree node).\nviewer.html: `cfg()` -> `cfgAt(node)`; tree nodes get a mode badge; mode-draft view renders them collapsed.",
+      "status": "active",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T02:43:25Z",
+          "by": {
+            "name": "devin",
+            "type": "agent"
+          },
+          "field": "body",
+          "from": "- Which modules, services, or packages change; which new ones (if any) are created?\n- Which layer owns the logic (UI, API, worker, database), and why there?\n- Does it add coupling between components that are currently independent?",
+          "to": "config/scope.cjs (new): `configAt(tree, nid)`, `scopeRoot(tree, nid)`.\ncore/tree.cjs, choose, comments, api, cli: swap `treeConfig(tree)` -> `configAt(tree, <node>)`.\ntemplates/apply.cjs: extract `applyNodes(tree, nodes, parent)`; a `type: tree` node resolves its mode (resolve.cjs) and recurses; cycle/depth guard next to the extends one.\ntemplates/schema.cjs: `mode` key, `tree` type.\nreview/{checks,inbox,summary}: iterate per scope (root goal + each tree node).\nviewer.html: `cfg()` -> `cfgAt(node)`; tree nodes get a mode badge; mode-draft view renders them collapsed."
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:24Z",
+      "updated_at": "2026-10-06T02:43:25Z"
+    },
+    "q9": {
+      "id": "q9",
+      "type": "question",
+      "kind": "when",
+      "title": "How does it reach users, and in what order?",
+      "body": "Nothing changes for existing trees (no tree nodes -> configAt returns tree.config). Ship as 0.4.0 via npm stage with a built-in `planning` mode as the example.",
+      "status": "active",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T02:43:25Z",
+          "by": {
+            "name": "devin",
+            "type": "agent"
+          },
+          "field": "body",
+          "from": "- Sequence the work so each step is shippable and reviewable on its own.\n- What must be migrated or backfilled, and can it run before the code ships?\n- How is it rolled back if something goes wrong after release?",
+          "to": "Nothing changes for existing trees (no tree nodes -> configAt returns tree.config). Ship as 0.4.0 via npm stage with a built-in `planning` mode as the example."
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:24Z",
+      "updated_at": "2026-10-06T02:43:25Z"
+    },
+    "q12": {
+      "id": "q12",
+      "type": "question",
+      "kind": "how",
+      "title": "How will we test it?",
+      "body": "Unit: configAt nesting (sub-tree inside sub-tree), statuses valid in one scope rejected in another, choose inside a sub-tree uses its accepted/rejected statuses, review per scope, mode cycle (a contains b contains a) rejected, export round-trip, legacy trees untouched. One focused browser pass: create from planning, add a feature, status pills differ per scope, mode editor shows the tree node collapsed.",
+      "status": "active",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T02:43:25Z",
+          "by": {
+            "name": "devin",
+            "type": "agent"
+          },
+          "field": "body",
+          "from": "- Which unit, integration, and end-to-end tests prove the success criteria?\n- Which existing tests cover the code we change, and which gaps must be filled first?\n- What needs manual or staged verification (UI, real integrations, load)?",
+          "to": "Unit: configAt nesting (sub-tree inside sub-tree), statuses valid in one scope rejected in another, choose inside a sub-tree uses its accepted/rejected statuses, review per scope, mode cycle (a contains b contains a) rejected, export round-trip, legacy trees untouched. One focused browser pass: create from planning, add a feature, status pills differ per scope, mode editor shows the tree node collapsed."
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:24Z",
+      "updated_at": "2026-10-06T02:43:25Z"
+    },
+    "q13": {
+      "id": "q13",
+      "type": "question",
+      "kind": "risk",
+      "title": "What are the security, privacy, and failure risks?",
+      "body": "Moving a node across a scope boundary: its status/kind/fields may not exist in the new scope -> the move is refused with a clear error (re-checked by the same policies).\nCycles: a mode that contains itself, directly or via others, fails at resolve time with the chain.\nStale copies: editing feature-planning later does not change existing sub-trees (same as trees today).",
+      "status": "active",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T02:43:25Z",
+          "by": {
+            "name": "devin",
+            "type": "agent"
+          },
+          "field": "body",
+          "from": "- Does it touch auth, permissions, secrets, or personal data; what is the threat model?\n- What happens on partial failure, timeouts, retries, or bad input?\n- Performance or cost impact at current and 10x scale?",
+          "to": "Moving a node across a scope boundary: its status/kind/fields may not exist in the new scope -> the move is refused with a clear error (re-checked by the same policies).\nCycles: a mode that contains itself, directly or via others, fails at resolve time with the chain.\nStale copies: editing feature-planning later does not change existing sub-trees (same as trees today)."
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:24Z",
+      "updated_at": "2026-10-06T02:43:25Z"
+    },
+    "o14": {
+      "id": "o14",
+      "type": "option",
+      "kind": null,
+      "title": "Scope lookup: configAt(tree, node) walks up to the nearest tree node (recommended)",
+      "body": "Same walk as the lock policy (`lockingNode`): nearest ancestor of type `tree` -> its `config`; none -> `tree.config` (or legacy). Every place that calls `treeConfig(tree)` today already has a node at hand, so it passes it.",
+      "status": "active",
+      "parent": "q6",
+      "pros": [
+        "One function owns scoping; policies (vocab, fields, labels, roles) stay unchanged",
+        "A sub-tree behaves exactly like a tree file, so no special cases",
+        "Matches the indentation mental model"
+      ],
+      "cons": [
+        "~15 call sites in lib/ and ~7 in the viewer change from tree-level to node-level config"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:24Z",
+      "updated_at": "2026-10-06T02:43:24Z"
+    },
+    "o15": {
+      "id": "o15",
+      "type": "option",
+      "kind": null,
+      "title": "Separate files per sub-tree, linked from the tree node",
+      "body": "",
+      "status": "rejected",
+      "parent": "q6",
+      "pros": [
+        "No scoping: each file has one config"
+      ],
+      "cons": [
+        "Not what was asked: the plan should be one file",
+        "Cross-file refs, dangling links, two-file writes"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:24Z",
+      "updated_at": "2026-10-06T02:43:24Z"
+    },
+    "o16": {
+      "id": "o16",
+      "type": "option",
+      "kind": null,
+      "title": "PR 1: configAt refactor (no behaviour change); PR 2: tree nodes + planning mode (recommended)",
+      "body": "",
+      "status": "active",
+      "parent": "q9",
+      "pros": [
+        "PR 1 is provably safe: all tests unchanged",
+        "PR 2 stays small and reviewable"
+      ],
+      "cons": [
+        "Two reviews"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:25Z",
+      "updated_at": "2026-10-06T02:43:25Z"
+    },
+    "o17": {
+      "id": "o17",
+      "type": "option",
+      "kind": null,
+      "title": "One PR",
+      "body": "",
+      "status": "active",
+      "parent": "q9",
+      "pros": [
+        "One review"
+      ],
+      "cons": [
+        "Refactor and feature mixed in one diff"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:25Z",
+      "updated_at": "2026-10-06T02:43:25Z"
+    },
+    "q18": {
+      "id": "q18",
+      "type": "question",
+      "kind": "other",
+      "title": "Open questions for Vineet",
+      "body": "",
+      "status": "accepted",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "devin",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "pending",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:25Z",
+      "updated_at": "2026-10-06T14:05:24Z"
+    },
+    "q19": {
+      "id": "q19",
+      "type": "question",
+      "kind": "what",
+      "title": "Which config does the tree node itself follow?",
+      "body": "Like a Python `def` line: the header sits in the outer scope, its body in the inner one.",
+      "status": "accepted",
+      "parent": "q18",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o20",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "status",
+          "from": "pending",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:25Z",
+      "updated_at": "2026-10-06T14:05:24Z"
+    },
+    "o20": {
+      "id": "o20",
+      "type": "option",
+      "kind": null,
+      "title": "The parent's, like a def line; its children follow its own (recommended)",
+      "body": "",
+      "status": "accepted",
+      "parent": "q19",
+      "pros": [
+        "The plan can track each feature with plan-level statuses"
+      ],
+      "cons": [
+        "Its status names can differ from those inside it"
+      ],
+      "rationale": "Parent only.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        },
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "Parent only."
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:25Z",
+      "updated_at": "2026-10-06T14:05:24Z"
+    },
+    "o21": {
+      "id": "o21",
+      "type": "option",
+      "kind": null,
+      "title": "Its own config",
+      "body": "",
+      "status": "rejected",
+      "parent": "q19",
+      "pros": [
+        "The whole sub-tree, header included, looks like a tree file"
+      ],
+      "cons": [
+        "The parent cannot set a status it knows on its own child"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:25Z",
+      "updated_at": "2026-10-06T14:05:24Z"
+    },
+    "q22": {
+      "id": "q22",
+      "type": "question",
+      "kind": "how",
+      "title": "Can links cross a scope boundary?",
+      "body": "",
+      "status": "accepted",
+      "parent": "q18",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o28",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "status",
+          "from": "pending",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:25Z",
+      "updated_at": "2026-10-06T14:05:24Z"
+    },
+    "o23": {
+      "id": "o23",
+      "type": "option",
+      "kind": null,
+      "title": "Yes; the link type must exist in the source node's scope (recommended)",
+      "body": "",
+      "status": "rejected",
+      "parent": "q22",
+      "pros": [
+        "Features can depend on each other"
+      ],
+      "cons": [
+        "Two scopes can define different link types"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:25Z",
+      "updated_at": "2026-10-06T14:05:24Z"
+    },
+    "o24": {
+      "id": "o24",
+      "type": "option",
+      "kind": null,
+      "title": "No, only within one scope",
+      "body": "",
+      "status": "rejected",
+      "parent": "q22",
+      "pros": [
+        "Simplest rule"
+      ],
+      "cons": [
+        "Cannot say feature A depends on feature B"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:25Z",
+      "updated_at": "2026-10-06T14:05:24Z"
+    },
+    "q25": {
+      "id": "q25",
+      "type": "question",
+      "kind": "what",
+      "title": "What does save as template write for a tree node?",
+      "body": "",
+      "status": "accepted",
+      "parent": "q18",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o29",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "status",
+          "from": "pending",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:25Z",
+      "updated_at": "2026-10-06T14:05:24Z"
+    },
+    "o26": {
+      "id": "o26",
+      "type": "option",
+      "kind": null,
+      "title": "Just the reference: type tree + mode (recommended)",
+      "body": "",
+      "status": "rejected",
+      "parent": "q25",
+      "pros": [
+        "Keeps the modes edited separately"
+      ],
+      "cons": [
+        "Edits made inside that sub-tree are not saved into the template"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:25Z",
+      "updated_at": "2026-10-06T14:05:24Z"
+    },
+    "o27": {
+      "id": "o27",
+      "type": "option",
+      "kind": null,
+      "title": "Inline its current children too",
+      "body": "",
+      "status": "rejected",
+      "parent": "q25",
+      "pros": [
+        "Keeps the edits"
+      ],
+      "cons": [
+        "Copies feature-planning into planning, which then drifts"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "created_at": "2026-10-06T02:43:25Z",
+      "updated_at": "2026-10-06T14:05:24Z"
+    },
+    "o28": {
+      "id": "o28",
+      "type": "option",
+      "kind": null,
+      "title": "No extra rule: the type is checked in the source node's scope",
+      "body": "",
+      "status": "accepted",
+      "parent": "q22",
+      "pros": [
+        "Zero extra code: falls out of configAt"
+      ],
+      "cons": [
+        "None needed for now"
+      ],
+      "rationale": "Keep it simple; don't add rules that aren't needed.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        },
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "Keep it simple; don't add rules that aren't needed."
+        }
+      ],
+      "created_by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "created_at": "2026-10-06T14:05:24Z",
+      "updated_at": "2026-10-06T14:05:24Z"
+    },
+    "o29": {
+      "id": "o29",
+      "type": "option",
+      "kind": null,
+      "title": "A tree is a tree: save type tree + mode + its current children inline",
+      "body": "`mode` is only the name of the template tree it came from. A template tree node with `children:` uses them instead of the mode's seeds; without children it takes the mode's seeds.",
+      "status": "accepted",
+      "parent": "q25",
+      "pros": [
+        "One concept: a tree with sub-trees is still a tree"
+      ],
+      "cons": [
+        "Saved children no longer follow later edits to the sub-mode"
+      ],
+      "rationale": "Type is still a tree; a tree with subtrees is still a tree. Mode is just an alias for a template tree.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        },
+        {
+          "at": "2026-10-06T14:05:24Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "Type is still a tree; a tree with subtrees is still a tree. Mode is just an alias for a template tree."
+        }
+      ],
+      "created_by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "created_at": "2026-10-06T14:05:24Z",
+      "updated_at": "2026-10-06T14:05:24Z"
+    }
+  },
+  "activity": [
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "g1",
+      "detail": "goal: Sub-tree nodes: a node of type tree that inherits another mode"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q2",
+      "detail": "question: Why build this, and why now?"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q3",
+      "detail": "question: Who uses it, and who has a stake in it?"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q4",
+      "detail": "question: What is in scope, and what is explicitly out?"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q5",
+      "detail": "question: What does success look like, and how is it measured?"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q6",
+      "detail": "question: How should we build it?"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q7",
+      "detail": "question: What data model and API changes are needed?"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q8",
+      "detail": "question: Where does it live in the codebase and architecture?"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q9",
+      "detail": "question: How does it reach users, and in what order?"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o10",
+      "detail": "option: Ship behind a feature flag"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o11",
+      "detail": "option: Big-bang release"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q12",
+      "detail": "question: How will we test it?"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q13",
+      "detail": "question: What are the security, privacy, and failure risks?"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "template",
+      "node": "g1",
+      "detail": "feature-planning (builtin): 12 node(s)"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "delete",
+      "node": "o10",
+      "detail": "1 node(s)"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "delete",
+      "node": "o11",
+      "detail": "1 node(s)"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "g1",
+      "detail": "body"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q2",
+      "detail": "body"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q3",
+      "detail": "body"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q4",
+      "detail": "body"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q5",
+      "detail": "body"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q6",
+      "detail": "body"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o14",
+      "detail": "option: Scope lookup: configAt(tree, node) walks up to the nearest tree node (recommended)"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o15",
+      "detail": "option: Separate files per sub-tree, linked from the tree node"
+    },
+    {
+      "at": "2026-10-06T02:43:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q7",
+      "detail": "body"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q8",
+      "detail": "body"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q9",
+      "detail": "body"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o16",
+      "detail": "option: PR 1: configAt refactor (no behaviour change); PR 2: tree nodes + planning mode (recommended)"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o17",
+      "detail": "option: One PR"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q12",
+      "detail": "body"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q13",
+      "detail": "body"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q18",
+      "detail": "question: Open questions for Vineet"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q19",
+      "detail": "question: Which config does the tree node itself follow?"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o20",
+      "detail": "option: The parent's, like a def line; its children follow its own (recommended)"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o21",
+      "detail": "option: Its own config"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q22",
+      "detail": "question: Can links cross a scope boundary?"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o23",
+      "detail": "option: Yes; the link type must exist in the source node's scope (recommended)"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o24",
+      "detail": "option: No, only within one scope"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q25",
+      "detail": "question: What does save as template write for a tree node?"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o26",
+      "detail": "option: Just the reference: type tree + mode (recommended)"
+    },
+    {
+      "at": "2026-10-06T02:43:25Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o27",
+      "detail": "option: Inline its current children too"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "o20",
+      "detail": "status=accepted, rationale"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "o21",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "q19",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "choose",
+      "node": "o20",
+      "detail": "Parent only."
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "o28",
+      "detail": "option: No extra rule: the type is checked in the source node's scope"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "o28",
+      "detail": "status=accepted, rationale"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "o23",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "o24",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "q22",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "choose",
+      "node": "o28",
+      "detail": "Keep it simple; don't add rules that aren't needed."
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "o29",
+      "detail": "option: A tree is a tree: save type tree + mode + its current children inline"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "o29",
+      "detail": "status=accepted, rationale"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "o26",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "o27",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "q25",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "choose",
+      "node": "o29",
+      "detail": "Type is still a tree; a tree with subtrees is still a tree. Mode is just an alias for a template tree."
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q7",
+      "detail": "body"
+    },
+    {
+      "at": "2026-10-06T14:05:24Z",
+      "by": {
+        "name": "devin",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q18",
+      "detail": "status=accepted"
+    }
+  ],
+  "template": "feature-planning",
+  "config": {
+    "fields": {
+      "body": {
+        "name": "Body",
+        "type": "text_body"
+      },
+      "pros": {
+        "name": "Pros",
+        "type": "list"
+      },
+      "cons": {
+        "name": "Cons",
+        "type": "list"
+      },
+      "rationale": {
+        "name": "Rationale",
+        "type": "text_body"
+      },
+      "assignee": {
+        "name": "Assignee",
+        "type": "text"
+      }
+    },
+    "link_types": {
+      "relates-to": {
+        "name": "Relates to"
+      },
+      "depends-on": {
+        "name": "Depends on"
+      },
+      "blocks": {
+        "name": "Blocks"
+      },
+      "supersedes": {
+        "name": "Supersedes"
+      },
+      "duplicates": {
+        "name": "Duplicates"
+      }
+    },
+    "statuses": {
+      "active": {
+        "name": "Active",
+        "role": "open"
+      },
+      "accepted": {
+        "name": "Accepted",
+        "role": "accepted"
+      },
+      "rejected": {
+        "name": "Rejected",
+        "role": "rejected"
+      },
+      "pending": {
+        "name": "Pending",
+        "role": "waiting"
+      }
+    },
+    "comments": {
+      "threads": true
+    },
+    "review": {
+      "required_kinds": [
+        "why",
+        "what",
+        "how",
+        "where"
+      ]
+    },
+    "kinds": [
+      "why",
+      "what",
+      "how",
+      "where",
+      "who",
+      "when",
+      "risk",
+      "other"
+    ],
+    "labels": []
+  }
+}
