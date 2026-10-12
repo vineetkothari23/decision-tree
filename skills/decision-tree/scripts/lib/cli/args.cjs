@@ -26,7 +26,7 @@ usage: dtree <command> [options]
   config [<tree>] [--mode name]               a tree's (or mode's) statuses, fields, link types, kinds, labels
   show <tree> [--body]                        print a tree
   node <tree> <node>                          print one node with its comment threads
-  add <tree> -p <parent> [-t question|option|decision|task|note] [-k kind] --title T
+  add <tree> -p <parent> [-t question|option|decision|task|note|tree or a type the mode declares] [-k kind] --title T
       [-b body] [-s status] [--pro P]... [--con C]... [--assignee A] [--label L]... [--field id=V]...
       [--lock children|subtree]
   add <tree> -p <parent> -t tree --mode <name> --title T

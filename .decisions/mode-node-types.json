@@ -1,0 +1,3371 @@
+{
+  "schema_version": 1,
+  "id": "mode-node-types",
+  "title": "Mode-defined node types",
+  "description": "Modes need a small, scoped extension point for node vocabularies; the vocabulary mode needs a first-class word node while 0.4.x stored configs remain compatible.",
+  "status": "implemented",
+  "created_at": "2026-10-12T01:00:34Z",
+  "updated_at": "2026-10-12T01:09:58Z",
+  "created_by": {
+    "name": "agent",
+    "type": "agent"
+  },
+  "revision": 68,
+  "next_id": 65,
+  "root_id": "g1",
+  "nodes": {
+    "g1": {
+      "id": "g1",
+      "type": "goal",
+      "kind": null,
+      "title": "Mode-defined node types",
+      "body": "Modes need a small, scoped extension point for node vocabularies; the vocabulary mode needs a first-class word node while 0.4.x stored configs remain compatible.",
+      "status": "active",
+      "parent": null,
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:00:34Z",
+      "updated_at": "2026-10-12T01:00:34Z"
+    },
+    "q2": {
+      "id": "q2",
+      "type": "question",
+      "kind": "why",
+      "title": "Why build this, and why now?",
+      "body": "- What problem does it solve, and what evidence shows it is real (tickets, data, requests)?\n- What happens if we do nothing, or do it next quarter?\n- Is this the root problem, or a symptom of something cheaper to fix?",
+      "status": "accepted",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o14",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:00:34Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "q3": {
+      "id": "q3",
+      "type": "question",
+      "kind": "who",
+      "title": "Who uses it, and who has a stake in it?",
+      "body": "- Which user segments or roles are affected, and how many?\n- Who owns the decision, who reviews it, who supports it after launch?\n- Which other teams or services depend on the parts we touch?",
+      "status": "accepted",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o19",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:00:34Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "q4": {
+      "id": "q4",
+      "type": "question",
+      "kind": "what",
+      "title": "What is in scope, and what is explicitly out?",
+      "body": "- List the smallest version that delivers the outcome; everything else is out or later.\n- Which edge cases, platforms, locales or plans are excluded on purpose?\n- What existing behavior must not change?",
+      "status": "accepted",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o24",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:00:34Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "q5": {
+      "id": "q5",
+      "type": "question",
+      "kind": "what",
+      "title": "What does success look like, and how is it measured?",
+      "body": "- Propose 1-3 measurable metrics with a baseline and target.\n- How and where is each metric collected, and when is it reviewed?\n- What result would make us roll back or abandon the feature?",
+      "status": "accepted",
+      "parent": "q4",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "human",
+      "chosen": "o29",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "pending",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:00:34Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "q6": {
+      "id": "q6",
+      "type": "question",
+      "kind": "how",
+      "title": "How should we build it?",
+      "body": "- Compare at least two approaches, including build vs. buy/reuse an existing library or service.\n- Which existing patterns in the codebase does each approach follow or break?\n- Rough effort, maintenance cost, and reversibility of each.",
+      "status": "accepted",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o34",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:42Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:00:34Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "q7": {
+      "id": "q7",
+      "type": "question",
+      "kind": "how",
+      "title": "What data model and API changes are needed?",
+      "body": "- New or changed tables, fields, events, config; are any migrations destructive?\n- New or changed endpoints, payloads, or public interfaces; are they backwards compatible?\n- Who else consumes these contracts, and how are they versioned?",
+      "status": "accepted",
+      "parent": "q6",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o39",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:42Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:00:34Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "q8": {
+      "id": "q8",
+      "type": "question",
+      "kind": "where",
+      "title": "Where does it live in the codebase and architecture?",
+      "body": "- Which modules, services, or packages change; which new ones (if any) are created?\n- Which layer owns the logic (UI, API, worker, database), and why there?\n- Does it add coupling between components that are currently independent?",
+      "status": "accepted",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o44",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:42Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:00:34Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "q9": {
+      "id": "q9",
+      "type": "question",
+      "kind": "when",
+      "title": "How does it reach users, and in what order?",
+      "body": "- Sequence the work so each step is shippable and reviewable on its own.\n- What must be migrated or backfilled, and can it run before the code ships?\n- How is it rolled back if something goes wrong after release?",
+      "status": "accepted",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o11",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:00:34Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "o10": {
+      "id": "o10",
+      "type": "option",
+      "kind": null,
+      "title": "Ship behind a feature flag",
+      "body": "",
+      "status": "rejected",
+      "parent": "q9",
+      "pros": [
+        "No new release machinery"
+      ],
+      "cons": [
+        "Rollback requires reverting the change"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "pros",
+          "from": [
+            "Gradual rollout and instant rollback",
+            "Can merge incomplete work safely",
+            "Enables A/B measurement"
+          ],
+          "to": [
+            "No new release machinery"
+          ]
+        },
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "cons",
+          "from": [
+            "Two code paths to test and maintain",
+            "Flag must be cleaned up later",
+            "Needs flag infrastructure"
+          ],
+          "to": [
+            "Rollback requires reverting the change"
+          ]
+        },
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:00:34Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "o11": {
+      "id": "o11",
+      "type": "option",
+      "kind": null,
+      "title": "Big-bang release",
+      "body": "",
+      "status": "accepted",
+      "parent": "q9",
+      "pros": [
+        "Simple additive release; no new flag state"
+      ],
+      "cons": [
+        "Rollback needs a follow-up revert"
+      ],
+      "rationale": "This adds a backward-compatible built-in mode and scope-local config section without a separate feature flag or migration.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "pros",
+          "from": [
+            "Single code path",
+            "No flag cleanup",
+            "Simplest for small or internal changes"
+          ],
+          "to": [
+            "Simple additive release; no new flag state"
+          ]
+        },
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "cons",
+          "from": [
+            "All users exposed at once",
+            "Rollback means a redeploy or revert",
+            "Hard to measure impact in isolation"
+          ],
+          "to": [
+            "Rollback needs a follow-up revert"
+          ]
+        },
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        },
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "This adds a backward-compatible built-in mode and scope-local config section without a separate feature flag or migration."
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:00:34Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "q12": {
+      "id": "q12",
+      "type": "question",
+      "kind": "how",
+      "title": "How will we test it?",
+      "body": "- Which unit, integration, and end-to-end tests prove the success criteria?\n- Which existing tests cover the code we change, and which gaps must be filled first?\n- What needs manual or staged verification (UI, real integrations, load)?",
+      "status": "accepted",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o49",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:00:34Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "q13": {
+      "id": "q13",
+      "type": "question",
+      "kind": "risk",
+      "title": "What are the security, privacy, and failure risks?",
+      "body": "- Does it touch auth, permissions, secrets, or personal data; what is the threat model?\n- What happens on partial failure, timeouts, retries, or bad input?\n- Performance or cost impact at current and 10x scale?",
+      "status": "accepted",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": "o54",
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:00:34Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "o14": {
+      "id": "o14",
+      "type": "option",
+      "kind": null,
+      "title": "Add mode-declared node types",
+      "body": "",
+      "status": "accepted",
+      "parent": "q2",
+      "pros": [
+        "Gives repo terms real kinds, validation and UI labels"
+      ],
+      "cons": [
+        "Requires coordinated config, template and viewer support"
+      ],
+      "rationale": "The requested vocabulary needs a real word type, while scoped declarations avoid unrelated global types.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        },
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "The requested vocabulary needs a real word type, while scoped declarations avoid unrelated global types."
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:40Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "o15": {
+      "id": "o15",
+      "type": "option",
+      "kind": null,
+      "title": "Keep using notes",
+      "body": "",
+      "status": "rejected",
+      "parent": "q2",
+      "pros": [
+        "No schema work"
+      ],
+      "cons": [
+        "Words remain untyped and hard to validate or browse"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "q16": {
+      "id": "q16",
+      "type": "question",
+      "kind": "how",
+      "title": "How should declarations stay maintainable?",
+      "body": "Prefer existing registries and data-driven config over one-off core conditions.",
+      "status": "active",
+      "parent": "o14",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "o17": {
+      "id": "o17",
+      "type": "option",
+      "kind": null,
+      "title": "Reuse keyed config sections",
+      "body": "",
+      "status": "active",
+      "parent": "q16",
+      "pros": [
+        "Fits established inheritance and diff behavior"
+      ],
+      "cons": [
+        "Requires extending the shared section parser"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "o18": {
+      "id": "o18",
+      "type": "option",
+      "kind": null,
+      "title": "Add a plugin layer",
+      "body": "",
+      "status": "active",
+      "parent": "q16",
+      "pros": [
+        "Separates extensions"
+      ],
+      "cons": [
+        "Adds runtime and maintenance surface"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "o19": {
+      "id": "o19",
+      "type": "option",
+      "kind": null,
+      "title": "Serve mode authors, maintainers, agents and contributors",
+      "body": "",
+      "status": "accepted",
+      "parent": "q3",
+      "pros": [
+        "One shared vocabulary supports humans and agents"
+      ],
+      "cons": [
+        "Requires clear human acceptance of new terms"
+      ],
+      "rationale": "The request explicitly targets both humans and agents and makes human acceptance part of glossary building.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        },
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "The request explicitly targets both humans and agents and makes human acceptance part of glossary building."
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "o20": {
+      "id": "o20",
+      "type": "option",
+      "kind": null,
+      "title": "Serve human maintainers only",
+      "body": "",
+      "status": "rejected",
+      "parent": "q3",
+      "pros": [
+        "Narrower audience"
+      ],
+      "cons": [
+        "Agents and contributors may use inconsistent terms"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "q21": {
+      "id": "q21",
+      "type": "question",
+      "kind": "who",
+      "title": "Who accepts new terms?",
+      "body": "New terms should start pending so a human can accept or reject them.",
+      "status": "active",
+      "parent": "o19",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "o22": {
+      "id": "o22",
+      "type": "option",
+      "kind": null,
+      "title": "Human accepts proposed words",
+      "body": "",
+      "status": "active",
+      "parent": "q21",
+      "pros": [
+        "Keeps repo vocabulary intentional"
+      ],
+      "cons": [
+        "Adds a small review step"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "o23": {
+      "id": "o23",
+      "type": "option",
+      "kind": null,
+      "title": "Automatically accept proposed words",
+      "body": "",
+      "status": "active",
+      "parent": "q21",
+      "pros": [
+        "Faster entry"
+      ],
+      "cons": [
+        "Can pollute the glossary"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "o24": {
+      "id": "o24",
+      "type": "option",
+      "kind": null,
+      "title": "Declare node types per mode scope",
+      "body": "",
+      "status": "accepted",
+      "parent": "q4",
+      "pros": [
+        "Sub-tree types stay local and built-ins remain universal"
+      ],
+      "cons": [
+        "Scope validation must cover adds, moves and templates"
+      ],
+      "rationale": "The brief requires scope-local types and rejects words outside their declaring sub-tree.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        },
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "The brief requires scope-local types and rejects words outside their declaring sub-tree."
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "o25": {
+      "id": "o25",
+      "type": "option",
+      "kind": null,
+      "title": "Make every declared type global",
+      "body": "",
+      "status": "rejected",
+      "parent": "q4",
+      "pros": [
+        "Simpler lookups"
+      ],
+      "cons": [
+        "Leaks sub-mode vocabulary across the tree"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "q26": {
+      "id": "q26",
+      "type": "question",
+      "kind": "how",
+      "title": "How should scoped declarations inherit?",
+      "body": "Keep inheritance predictable for child modes.",
+      "status": "active",
+      "parent": "o24",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "o27": {
+      "id": "o27",
+      "type": "option",
+      "kind": null,
+      "title": "Merge keyed entries",
+      "body": "",
+      "status": "active",
+      "parent": "q26",
+      "pros": [
+        "Supports incremental mode customization"
+      ],
+      "cons": [
+        "Needs explicit null removal semantics"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "o28": {
+      "id": "o28",
+      "type": "option",
+      "kind": null,
+      "title": "Replace the entire section",
+      "body": "",
+      "status": "active",
+      "parent": "q26",
+      "pros": [
+        "Easy to reason about in isolation"
+      ],
+      "cons": [
+        "Drops unrelated inherited declarations"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "o29": {
+      "id": "o29",
+      "type": "option",
+      "kind": null,
+      "title": "Gate success on tests, package and viewer smoke",
+      "body": "",
+      "status": "accepted",
+      "parent": "q5",
+      "pros": [
+        "Reproducible acceptance covers compatibility and published files"
+      ],
+      "cons": [
+        "Requires focused automated and headless checks"
+      ],
+      "rationale": "The owner specified npm tests, lint, pack inclusion, CLI behavior and a headless viewer label/no-null check.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        },
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "The owner specified npm tests, lint, pack inclusion, CLI behavior and a headless viewer label/no-null check."
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "o30": {
+      "id": "o30",
+      "type": "option",
+      "kind": null,
+      "title": "Wait for post-release adoption metrics",
+      "body": "",
+      "status": "rejected",
+      "parent": "q5",
+      "pros": [
+        "Measures real usage"
+      ],
+      "cons": [
+        "Cannot validate the requested behavior before shipping"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:41Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:41Z",
+      "updated_at": "2026-10-12T01:09:41Z"
+    },
+    "q31": {
+      "id": "q31",
+      "type": "question",
+      "kind": "when",
+      "title": "What should block release?",
+      "body": "Use the checks specified in the implementation brief.",
+      "status": "active",
+      "parent": "o29",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o32": {
+      "id": "o32",
+      "type": "option",
+      "kind": null,
+      "title": "Required checks pass",
+      "body": "",
+      "status": "active",
+      "parent": "q31",
+      "pros": [
+        "Objective and repeatable"
+      ],
+      "cons": [
+        "Does not measure long-term adoption"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o33": {
+      "id": "o33",
+      "type": "option",
+      "kind": null,
+      "title": "Ship and observe usage first",
+      "body": "",
+      "status": "active",
+      "parent": "q31",
+      "pros": [
+        "Fast initial release"
+      ],
+      "cons": [
+        "Defers regressions to users"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o34": {
+      "id": "o34",
+      "type": "option",
+      "kind": null,
+      "title": "Extend the existing config registries",
+      "body": "",
+      "status": "accepted",
+      "parent": "q6",
+      "pros": [
+        "Small data-driven surface reuses established patterns"
+      ],
+      "cons": [
+        "Touches several existing layers"
+      ],
+      "rationale": "SECTIONS, policy helpers and existing template paths provide the smallest extensible design without runtime dependencies.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:42Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        },
+        {
+          "at": "2026-10-12T01:09:42Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "SECTIONS, policy helpers and existing template paths provide the smallest extensible design without runtime dependencies."
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o35": {
+      "id": "o35",
+      "type": "option",
+      "kind": null,
+      "title": "Hard-code vocabulary behavior",
+      "body": "",
+      "status": "rejected",
+      "parent": "q6",
+      "pros": [
+        "Quick first implementation"
+      ],
+      "cons": [
+        "Violates open/closed and single-responsibility priorities"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:42Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "q36": {
+      "id": "q36",
+      "type": "question",
+      "kind": "where",
+      "title": "Where should type validation live?",
+      "body": "Keep each rule in its existing responsibility layer.",
+      "status": "active",
+      "parent": "o34",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o37": {
+      "id": "o37",
+      "type": "option",
+      "kind": null,
+      "title": "Shared policy helpers",
+      "body": "",
+      "status": "active",
+      "parent": "q36",
+      "pros": [
+        "Reusable by add, update, conform and templates"
+      ],
+      "cons": [
+        "Requires careful helper boundaries"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o38": {
+      "id": "o38",
+      "type": "option",
+      "kind": null,
+      "title": "Scattered type conditionals",
+      "body": "",
+      "status": "active",
+      "parent": "q36",
+      "pros": [
+        "Local changes seem simple"
+      ],
+      "cons": [
+        "Behavior drifts between callers"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o39": {
+      "id": "o39",
+      "type": "option",
+      "kind": null,
+      "title": "Use keyed node_types config entries",
+      "body": "",
+      "status": "accepted",
+      "parent": "q7",
+      "pros": [
+        "Supports merge, null removal, diff and scope"
+      ],
+      "cons": [
+        "Adds one section to config parsing"
+      ],
+      "rationale": "A keyed section with required name, optional prefix/description and replaceable kinds matches existing config behavior.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:42Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        },
+        {
+          "at": "2026-10-12T01:09:42Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "A keyed section with required name, optional prefix/description and replaceable kinds matches existing config behavior."
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o40": {
+      "id": "o40",
+      "type": "option",
+      "kind": null,
+      "title": "Use a separate global registry",
+      "body": "",
+      "status": "rejected",
+      "parent": "q7",
+      "pros": [
+        "Could simplify lookup"
+      ],
+      "cons": [
+        "Breaks mode inheritance and scope semantics"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:42Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "q41": {
+      "id": "q41",
+      "type": "question",
+      "kind": "how",
+      "title": "How should child modes override declarations?",
+      "body": "Preserve only the entry and list semantics requested.",
+      "status": "active",
+      "parent": "o39",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o42": {
+      "id": "o42",
+      "type": "option",
+      "kind": null,
+      "title": "Merge entry fields; replace kinds",
+      "body": "",
+      "status": "active",
+      "parent": "q41",
+      "pros": [
+        "Supports small overrides"
+      ],
+      "cons": [
+        "List replacement must be tested"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o43": {
+      "id": "o43",
+      "type": "option",
+      "kind": null,
+      "title": "Replace complete node type",
+      "body": "",
+      "status": "active",
+      "parent": "q41",
+      "pros": [
+        "Avoids partial-state ambiguity"
+      ],
+      "cons": [
+        "Cannot inherit shared entry properties"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o44": {
+      "id": "o44",
+      "type": "option",
+      "kind": null,
+      "title": "Extend existing backend and viewer modules",
+      "body": "",
+      "status": "accepted",
+      "parent": "q8",
+      "pros": [
+        "Core, templates, config output and viewer remain aligned"
+      ],
+      "cons": [
+        "Requires careful compatibility helpers"
+      ],
+      "rationale": "The change belongs in the existing config registry, policy, template schema/export and viewer editor.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:42Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        },
+        {
+          "at": "2026-10-12T01:09:42Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "The change belongs in the existing config registry, policy, template schema/export and viewer editor."
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o45": {
+      "id": "o45",
+      "type": "option",
+      "kind": null,
+      "title": "Build an independent extension package",
+      "body": "",
+      "status": "rejected",
+      "parent": "q8",
+      "pros": [
+        "Could isolate future plugins"
+      ],
+      "cons": [
+        "Adds dependencies and maintenance"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:42Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "q46": {
+      "id": "q46",
+      "type": "question",
+      "kind": "how",
+      "title": "Which viewer surfaces need the new type?",
+      "body": "Mirror scoped config helpers across viewer paths.",
+      "status": "active",
+      "parent": "o44",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o47": {
+      "id": "o47",
+      "type": "option",
+      "kind": null,
+      "title": "Labels, colors, forms and mode editor",
+      "body": "",
+      "status": "active",
+      "parent": "q46",
+      "pros": [
+        "Keeps custom nodes manageable"
+      ],
+      "cons": [
+        "Adds viewer behavior to cover"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:42Z",
+      "updated_at": "2026-10-12T01:09:42Z"
+    },
+    "o48": {
+      "id": "o48",
+      "type": "option",
+      "kind": null,
+      "title": "Static labels only",
+      "body": "",
+      "status": "active",
+      "parent": "q46",
+      "pros": [
+        "Smaller surface"
+      ],
+      "cons": [
+        "Leaves add/edit flows incomplete"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "o49": {
+      "id": "o49",
+      "type": "option",
+      "kind": null,
+      "title": "Run unit, CLI, packaging and headless checks",
+      "body": "",
+      "status": "accepted",
+      "parent": "q12",
+      "pros": [
+        "Covers config semantics, end-to-end usage and viewer output"
+      ],
+      "cons": [
+        "Headless checks are narrower than full interactive browser tests"
+      ],
+      "rationale": "The requested tests cover legacy configs, scoping, templates, export, CLI and a headless snapshot.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        },
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "The requested tests cover legacy configs, scoping, templates, export, CLI and a headless snapshot."
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "o50": {
+      "id": "o50",
+      "type": "option",
+      "kind": null,
+      "title": "Rely on manual review only",
+      "body": "",
+      "status": "rejected",
+      "parent": "q12",
+      "pros": [
+        "Low test maintenance"
+      ],
+      "cons": [
+        "Misses regressions and package omissions"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "q51": {
+      "id": "q51",
+      "type": "question",
+      "kind": "how",
+      "title": "What viewer evidence is sufficient?",
+      "body": "Use a fresh scratch app with the vocabulary mode.",
+      "status": "active",
+      "parent": "o49",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "o52": {
+      "id": "o52",
+      "type": "option",
+      "kind": null,
+      "title": "Headless screenshot and DOM assertions",
+      "body": "",
+      "status": "active",
+      "parent": "q51",
+      "pros": [
+        "Fast, repeatable and checks the requested label"
+      ],
+      "cons": [
+        "Does not exercise every interaction"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "o53": {
+      "id": "o53",
+      "type": "option",
+      "kind": null,
+      "title": "Full browser interaction matrix",
+      "body": "",
+      "status": "active",
+      "parent": "q51",
+      "pros": [
+        "Covers more workflows"
+      ],
+      "cons": [
+        "Playwright is unavailable and would add upkeep"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "o54": {
+      "id": "o54",
+      "type": "option",
+      "kind": null,
+      "title": "Keep legacy configs safe and reject scope leaks",
+      "body": "",
+      "status": "accepted",
+      "parent": "q13",
+      "pros": [
+        "Missing node_types defaults to empty and conform catches moved words"
+      ],
+      "cons": [
+        "Requires defensive reads in server and viewer"
+      ],
+      "rationale": "Explicit missing-key helpers and scope conflict checks address the stated 0.4.x compatibility risk.",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        },
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "rationale",
+          "from": "",
+          "to": "Explicit missing-key helpers and scope conflict checks address the stated 0.4.x compatibility risk."
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "o55": {
+      "id": "o55",
+      "type": "option",
+      "kind": null,
+      "title": "Assume every stored config is current",
+      "body": "",
+      "status": "rejected",
+      "parent": "q13",
+      "pros": [
+        "Less compatibility code"
+      ],
+      "cons": [
+        "Breaks 0.4.x trees"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:43Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "rejected"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "q56": {
+      "id": "q56",
+      "type": "question",
+      "kind": "risk",
+      "title": "How should malformed declarations fail?",
+      "body": "Reject invalid IDs, prefixes and duplicate kinds during config parsing.",
+      "status": "active",
+      "parent": "o54",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "o57": {
+      "id": "o57",
+      "type": "option",
+      "kind": null,
+      "title": "Validate early with clear paths",
+      "body": "",
+      "status": "active",
+      "parent": "q56",
+      "pros": [
+        "Prevents malformed modes from being saved"
+      ],
+      "cons": [
+        "Needs thorough error tests"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "o58": {
+      "id": "o58",
+      "type": "option",
+      "kind": null,
+      "title": "Silently normalize bad values",
+      "body": "",
+      "status": "active",
+      "parent": "q56",
+      "pros": [
+        "More forgiving input"
+      ],
+      "cons": [
+        "Can hide typos and collisions"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "q59": {
+      "id": "q59",
+      "type": "question",
+      "kind": "when",
+      "title": "What is the rollback path?",
+      "body": "If the change causes regressions, revert the feature branch before the next package release.",
+      "status": "active",
+      "parent": "o11",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "o60": {
+      "id": "o60",
+      "type": "option",
+      "kind": null,
+      "title": "Revert before release",
+      "body": "",
+      "status": "active",
+      "parent": "q59",
+      "pros": [
+        "Returns to the prior behavior"
+      ],
+      "cons": [
+        "Requires a new package release if already published"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "o61": {
+      "id": "o61",
+      "type": "option",
+      "kind": null,
+      "title": "Keep the additive behavior",
+      "body": "",
+      "status": "active",
+      "parent": "q59",
+      "pros": [
+        "No rollback effort"
+      ],
+      "cons": [
+        "Leaves regressions in place"
+      ],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:43Z",
+      "updated_at": "2026-10-12T01:09:43Z"
+    },
+    "t62": {
+      "id": "t62",
+      "type": "task",
+      "kind": null,
+      "title": "Implement scoped node_types config, policy and template support",
+      "body": "Deliver and verify this scoped implementation step.",
+      "status": "accepted",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:58Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:44Z",
+      "updated_at": "2026-10-12T01:09:58Z"
+    },
+    "t63": {
+      "id": "t63",
+      "type": "task",
+      "kind": null,
+      "title": "Add vocabulary mode, viewer integration and documentation",
+      "body": "Deliver and verify this scoped implementation step.",
+      "status": "accepted",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:58Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:44Z",
+      "updated_at": "2026-10-12T01:09:58Z"
+    },
+    "t64": {
+      "id": "t64",
+      "type": "task",
+      "kind": null,
+      "title": "Verify tests, package contents and headless viewer output",
+      "body": "Deliver and verify this scoped implementation step.",
+      "status": "accepted",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-12T01:09:58Z",
+          "by": {
+            "name": "agent",
+            "type": "agent"
+          },
+          "field": "status",
+          "from": "active",
+          "to": "accepted"
+        }
+      ],
+      "created_by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "created_at": "2026-10-12T01:09:44Z",
+      "updated_at": "2026-10-12T01:09:58Z"
+    }
+  },
+  "activity": [
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "g1",
+      "detail": "goal: Mode-defined node types"
+    },
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q2",
+      "detail": "question: Why build this, and why now?"
+    },
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q3",
+      "detail": "question: Who uses it, and who has a stake in it?"
+    },
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q4",
+      "detail": "question: What is in scope, and what is explicitly out?"
+    },
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q5",
+      "detail": "question: What does success look like, and how is it measured?"
+    },
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q6",
+      "detail": "question: How should we build it?"
+    },
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q7",
+      "detail": "question: What data model and API changes are needed?"
+    },
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q8",
+      "detail": "question: Where does it live in the codebase and architecture?"
+    },
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q9",
+      "detail": "question: How does it reach users, and in what order?"
+    },
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o10",
+      "detail": "option: Ship behind a feature flag"
+    },
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o11",
+      "detail": "option: Big-bang release"
+    },
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q12",
+      "detail": "question: How will we test it?"
+    },
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q13",
+      "detail": "question: What are the security, privacy, and failure risks?"
+    },
+    {
+      "at": "2026-10-12T01:00:34Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "template",
+      "node": "g1",
+      "detail": "feature-planning (builtin): 12 node(s)"
+    },
+    {
+      "at": "2026-10-12T01:09:40Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o14",
+      "detail": "option: Add mode-declared node types"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o15",
+      "detail": "option: Keep using notes"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o14",
+      "detail": "status=accepted, rationale"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o15",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q2",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "choose",
+      "node": "o14",
+      "detail": "The requested vocabulary needs a real word type, while scoped declarations avoid unrelated global types."
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q16",
+      "detail": "question: How should declarations stay maintainable?"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o17",
+      "detail": "option: Reuse keyed config sections"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o18",
+      "detail": "option: Add a plugin layer"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o19",
+      "detail": "option: Serve mode authors, maintainers, agents and contributors"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o20",
+      "detail": "option: Serve human maintainers only"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o19",
+      "detail": "status=accepted, rationale"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o20",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q3",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "choose",
+      "node": "o19",
+      "detail": "The request explicitly targets both humans and agents and makes human acceptance part of glossary building."
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q21",
+      "detail": "question: Who accepts new terms?"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o22",
+      "detail": "option: Human accepts proposed words"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o23",
+      "detail": "option: Automatically accept proposed words"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o24",
+      "detail": "option: Declare node types per mode scope"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o25",
+      "detail": "option: Make every declared type global"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o24",
+      "detail": "status=accepted, rationale"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o25",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q4",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "choose",
+      "node": "o24",
+      "detail": "The brief requires scope-local types and rejects words outside their declaring sub-tree."
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q26",
+      "detail": "question: How should scoped declarations inherit?"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o27",
+      "detail": "option: Merge keyed entries"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o28",
+      "detail": "option: Replace the entire section"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o29",
+      "detail": "option: Gate success on tests, package and viewer smoke"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o30",
+      "detail": "option: Wait for post-release adoption metrics"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o29",
+      "detail": "status=accepted, rationale"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o30",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q5",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-12T01:09:41Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "choose",
+      "node": "o29",
+      "detail": "The owner specified npm tests, lint, pack inclusion, CLI behavior and a headless viewer label/no-null check."
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q31",
+      "detail": "question: What should block release?"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o32",
+      "detail": "option: Required checks pass"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o33",
+      "detail": "option: Ship and observe usage first"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o34",
+      "detail": "option: Extend the existing config registries"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o35",
+      "detail": "option: Hard-code vocabulary behavior"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o34",
+      "detail": "status=accepted, rationale"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o35",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q6",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "choose",
+      "node": "o34",
+      "detail": "SECTIONS, policy helpers and existing template paths provide the smallest extensible design without runtime dependencies."
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q36",
+      "detail": "question: Where should type validation live?"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o37",
+      "detail": "option: Shared policy helpers"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o38",
+      "detail": "option: Scattered type conditionals"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o39",
+      "detail": "option: Use keyed node_types config entries"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o40",
+      "detail": "option: Use a separate global registry"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o39",
+      "detail": "status=accepted, rationale"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o40",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q7",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "choose",
+      "node": "o39",
+      "detail": "A keyed section with required name, optional prefix/description and replaceable kinds matches existing config behavior."
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q41",
+      "detail": "question: How should child modes override declarations?"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o42",
+      "detail": "option: Merge entry fields; replace kinds"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o43",
+      "detail": "option: Replace complete node type"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o44",
+      "detail": "option: Extend existing backend and viewer modules"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o45",
+      "detail": "option: Build an independent extension package"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o44",
+      "detail": "status=accepted, rationale"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o45",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q8",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "choose",
+      "node": "o44",
+      "detail": "The change belongs in the existing config registry, policy, template schema/export and viewer editor."
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q46",
+      "detail": "question: Which viewer surfaces need the new type?"
+    },
+    {
+      "at": "2026-10-12T01:09:42Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o47",
+      "detail": "option: Labels, colors, forms and mode editor"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o48",
+      "detail": "option: Static labels only"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o49",
+      "detail": "option: Run unit, CLI, packaging and headless checks"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o50",
+      "detail": "option: Rely on manual review only"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o49",
+      "detail": "status=accepted, rationale"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o50",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q12",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "choose",
+      "node": "o49",
+      "detail": "The requested tests cover legacy configs, scoping, templates, export, CLI and a headless snapshot."
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q51",
+      "detail": "question: What viewer evidence is sufficient?"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o52",
+      "detail": "option: Headless screenshot and DOM assertions"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o53",
+      "detail": "option: Full browser interaction matrix"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o54",
+      "detail": "option: Keep legacy configs safe and reject scope leaks"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o55",
+      "detail": "option: Assume every stored config is current"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o54",
+      "detail": "status=accepted, rationale"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o55",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q13",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "choose",
+      "node": "o54",
+      "detail": "Explicit missing-key helpers and scope conflict checks address the stated 0.4.x compatibility risk."
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q56",
+      "detail": "question: How should malformed declarations fail?"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o57",
+      "detail": "option: Validate early with clear paths"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o58",
+      "detail": "option: Silently normalize bad values"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o10",
+      "detail": "pros, cons"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o11",
+      "detail": "pros, cons"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o11",
+      "detail": "status=accepted, rationale"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "o10",
+      "detail": "status=rejected"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "q9",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "choose",
+      "node": "o11",
+      "detail": "This adds a backward-compatible built-in mode and scope-local config section without a separate feature flag or migration."
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "q59",
+      "detail": "question: What is the rollback path?"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o60",
+      "detail": "option: Revert before release"
+    },
+    {
+      "at": "2026-10-12T01:09:43Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "o61",
+      "detail": "option: Keep the additive behavior"
+    },
+    {
+      "at": "2026-10-12T01:09:44Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "t62",
+      "detail": "task: Implement scoped node_types config, policy and template support"
+    },
+    {
+      "at": "2026-10-12T01:09:44Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "t63",
+      "detail": "task: Add vocabulary mode, viewer integration and documentation"
+    },
+    {
+      "at": "2026-10-12T01:09:44Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "add",
+      "node": "t64",
+      "detail": "task: Verify tests, package contents and headless viewer output"
+    },
+    {
+      "at": "2026-10-12T01:09:58Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "t62",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-12T01:09:58Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "t63",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-12T01:09:58Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "update",
+      "node": "t64",
+      "detail": "status=accepted"
+    },
+    {
+      "at": "2026-10-12T01:09:58Z",
+      "by": {
+        "name": "agent",
+        "type": "agent"
+      },
+      "action": "tree",
+      "node": null,
+      "detail": "status=implemented"
+    }
+  ],
+  "template": "feature-planning",
+  "config": {
+    "fields": {
+      "body": {
+        "name": "Body",
+        "type": "text_body"
+      },
+      "pros": {
+        "name": "Pros",
+        "type": "list"
+      },
+      "cons": {
+        "name": "Cons",
+        "type": "list"
+      },
+      "rationale": {
+        "name": "Rationale",
+        "type": "text_body"
+      },
+      "assignee": {
+        "name": "Assignee",
+        "type": "text"
+      }
+    },
+    "link_types": {
+      "relates-to": {
+        "name": "Relates to"
+      },
+      "depends-on": {
+        "name": "Depends on"
+      },
+      "blocks": {
+        "name": "Blocks"
+      },
+      "supersedes": {
+        "name": "Supersedes"
+      },
+      "duplicates": {
+        "name": "Duplicates"
+      }
+    },
+    "statuses": {
+      "active": {
+        "name": "Active",
+        "role": "open"
+      },
+      "accepted": {
+        "name": "Accepted",
+        "role": "accepted"
+      },
+      "rejected": {
+        "name": "Rejected",
+        "role": "rejected"
+      },
+      "pending": {
+        "name": "Pending",
+        "role": "waiting"
+      }
+    },
+    "comments": {
+      "threads": true
+    },
+    "review": {
+      "required_kinds": [
+        "why",
+        "what",
+        "how",
+        "where"
+      ]
+    },
+    "kinds": [
+      "why",
+      "what",
+      "how",
+      "where",
+      "who",
+      "when",
+      "risk",
+      "other"
+    ],
+    "labels": []
+  }
+}

@@ -138,6 +138,27 @@ test("children: overrides the mode's seeds and is validated against the sub-mode
   err(() => dt.validateTemplate({ template: 1, name: "x", title: "x", nodes: [{ title: "T", mode: "default" }] }, { label: "x", name: "x" }), /only allowed on tree nodes/);
 });
 
+test("declared node types are scoped to their mode and explicit sub-tree children use that scope", () => {
+  const vocabulary = mode("vocabulary", "extends: default\nconfig:\n  node_types:\n    word:\n      name: Word\n      prefix: w\n      kinds: [common-noun, proper-noun]\n  fields:\n    definition:\n      name: Definition\n      type: text_body\n");
+  const childMode = (children) => mode("parent", "extends: default\nnodes:\n  - title: Glossary\n    type: tree\n    mode: vocabulary\n" + children);
+  const store = project({
+    vocabulary,
+    parent: childMode("    children:\n      - title: Decision Tree\n        type: word\n        kind: proper-noun\n        fields:\n          definition: A repo-specific planning tool.\n"),
+    invalid: mode("invalid", "extends: default\nnodes:\n  - title: Glossary\n    type: tree\n    mode: default\n    children:\n      - title: Decision Tree\n        type: word\n"),
+  });
+  const tree = newTree(store, "parent");
+  const sub = ofType(tree, "tree")[0];
+  const word = dt.addNode(tree, { parent: sub.id, type: "word", kind: "proper-noun", title: "Decision Tree", author: AGENT });
+  assert.match(word.id, /^w\d+$/);
+  assert.equal(word.kind, "proper-noun");
+  err(() => dt.addNode(tree, { parent: "g1", type: "word", title: "Out of scope", author: AGENT }), /invalid node type/);
+  err(() => dt.moveNode(tree, word.id, "g1", AGENT), new RegExp(`cannot move ${word.id} under g1: .*undeclared type "word"`));
+
+  const explicit = newTree(store, "parent", "explicit");
+  assert.ok(Object.values(explicit.nodes).some((n) => n.type === "word" && n.kind === "proper-noun"));
+  err(() => dt.resolveMode(store, "invalid"), /sub-tree "default".*node type "word" is not declared in this mode/);
+});
+
 test("moving across a scope boundary re-checks the moved subtree", () => {
   const store = project();
   const tree = newTree(store, "planning");

@@ -9,7 +9,7 @@ const { NODE_TYPES, TREE_STATUSES, ACTIVITY_LIMIT } = require("../constants.cjs"
 const { DTError, now, same, choice, hasOwn, isPlainObject } = require("../util.cjs");
 const { configAt, configUnder, scopeRoot } = require("../config/scope.cjs");
 const { initialStatus } = require("../config/roles.cjs");
-const { checkStatus, checkKind, linkType } = require("./policy/vocab.cjs");
+const { checkStatus, checkKind, nodeTypesOf, linkType } = require("./policy/vocab.cjs");
 const { isEmptyValue, fieldValue, readField, writeField, fieldPath } = require("./policy/fields.cjs");
 const { labelsValue } = require("./policy/labels.cjs");
 const { lockValue, assertUnlocked } = require("./policy/locks.cjs");
@@ -53,12 +53,13 @@ function fieldValues(cfg, values) {
 function addNode(tree, { parent, type = "question", title, body = "", kind = null, status = null, author = null,
   pros = null, cons = null, assignee = "", rationale = "", fields = {}, labels = null, lock = null, mode = null, config = null }) {
   const cfg = configUnder(tree, parent);
-  choice(type, Object.keys(NODE_TYPES), "node type");
+  const declaredTypes = nodeTypesOf(cfg);
+  choice(type, [...Object.keys(NODE_TYPES), ...Object.keys(declaredTypes)], "node type");
   if (type === "tree" && (!mode || !isPlainObject(config))) {
     throw new DTError("a tree node needs a mode (dtree add <tree> -p <parent> -t tree --mode <name> --title T)");
   }
   const st = checkStatus(cfg, status || initialStatus(cfg));
-  const k = type === "question" ? checkKind(cfg, kind) : null;
+  const k = type === "question" || hasOwn(declaredTypes, type) ? checkKind(cfg, kind, type) : null;
   if (parent !== null && parent !== undefined) {
     getNode(tree, parent);
     assertUnlocked(tree, parent, "add a node here");
@@ -70,7 +71,7 @@ function addNode(tree, { parent, type = "question", title, body = "", kind = nul
   const values = fieldValues(cfg, { body, pros, cons, rationale, assignee, ...fields });
   const nodeLabels = labelsValue(cfg, labels);
   const nodeLock = lockValue(lock);
-  const nid = `${NODE_TYPES[type]}${tree.next_id}`;
+  const nid = `${declaredTypes[type]?.prefix || NODE_TYPES[type]}${tree.next_id}`;
   tree.next_id += 1;
   const ts = now();
   const node = {
@@ -113,10 +114,11 @@ function updateNode(tree, nid, changes, author) {
       for (const [id, v] of Object.entries(raw)) if (v !== undefined && v !== null) updates.push([fieldPath(id), id, fieldValue(cfg, id, v)]);
     } else if (NODE_KEYS.includes(key)) {
       let value = raw;
+      const newType = changes.type ?? node.type;
       if (key === "status") checkStatus(cfg, value);
-      else if (key === "kind") value = checkKind(cfg, value || null);
+      else if (key === "kind") value = checkKind(cfg, value || null, newType);
       else if (key === "type") {
-        choice(value, Object.keys(NODE_TYPES), "node type");
+        choice(value, [...Object.keys(NODE_TYPES), ...Object.keys(nodeTypesOf(cfg))], "node type");
         if ((value === "tree") !== (node.type === "tree")) throw new DTError(`cannot change ${nid} from ${node.type} to ${value}: add a tree node with --mode instead`);
       }
       else if (key === "labels") value = labelsValue(cfg, value);

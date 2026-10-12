@@ -60,9 +60,13 @@ Run from the app root (or pass `-C <app-root>`). Set `DTREE_AUTHOR=<your agent n
 9. **Show the tree to the human**: `dt show <tree> [--body]` prints an ASCII tree for chat. For the interactive viewer start `dt serve --port 8765` (binds 127.0.0.1; add `--scan ~/repos` to list every app's `.decisions`, or `--extra-project <path>`), keep it running in a background shell, and share it (in Devin, call `browser_preview` with that port). For a static, read-only snapshot to attach to a message or PR: `dt render -o decisions.html [--tree <slug>]`.
 10. **Close out**: when the plan is settled set `dt set-tree <tree> --status decided`; after shipping, mark tasks accepted/closed (`done` in trees without a mode) and the tree `implemented`. Commit `.decisions/` with the code so future agents see why things were built this way.
 
+## Repo vocabulary
+
+If `.decisions/vocabulary.json` exists, read it (`dtree show vocabulary --body`) before planning; use its terms in plans and comments. When a plan introduces a repo-specific term, add it as a `word` for human acceptance (initial status). To build a glossary, create it with `--mode vocabulary`, scan the README, module/type names and UI labels, and include only repo-specific words.
+
 ## Templates and custom modes
 
-Templates (also called modes) are YAML files that seed a new tree with questions, options, tasks and notes under the root goal. `dt new --template <name>` (or `--mode <name>`) looks up, first match wins: a file path (argument contains `/` or ends in `.yaml/.yml/.json`), the project's `.decisions/templates/<name>.yaml`, each dir in `$DTREE_TEMPLATES_PATH`, `~/.config/decision-tree/templates/` (`$XDG_CONFIG_HOME`), then the built-ins in this skill's `templates/` (`feature-planning`, `planning`, `pr-review`). `dt templates` shows every template with its source and which one wins; `dt template show <name>` prints its outline.
+Templates (also called modes) are YAML files that seed a new tree with questions, options, tasks and notes under the root goal. `dt new --template <name>` (or `--mode <name>`) looks up, first match wins: a file path (argument contains `/` or ends in `.yaml/.yml/.json`), the project's `.decisions/templates/<name>.yaml`, each dir in `$DTREE_TEMPLATES_PATH`, `~/.config/decision-tree/templates/` (`$XDG_CONFIG_HOME`), then the built-ins in this skill's `templates/` (`feature-planning`, `plan`, `planning`, `pr-review`, `vocabulary`). `dt templates` shows every template with its source and which one wins; `dt template show <name>` prints its outline.
 
 ### Mode config
 
