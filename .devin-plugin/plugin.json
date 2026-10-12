@@ -1,4 +1,4 @@
 {
   "name": "decision-tree",
-  "description": "Question-driven decision trees for planning software features, stored as JSON in each app's .decisions/ folder, with a local HTML viewer for humans and agents to collaborate."
+  "description": "Plan with AI agents in a shared tree of questions, options and decisions. A CLI for agents, a browser viewer for humans, and YAML modes for other uses."
 }

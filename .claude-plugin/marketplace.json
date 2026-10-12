@@ -9,7 +9,7 @@
     {
       "name": "decision-tree",
       "source": "./",
-      "description": "Plan software features as question-driven decision trees with a local HTML viewer for human-agent coordination.",
+      "description": "Plan with AI agents in a shared tree of questions, options and decisions. A CLI for agents, a browser viewer for humans, and YAML modes for other uses.",
       "category": "productivity",
       "keywords": ["planning", "decision-tree", "adr"]
     }
