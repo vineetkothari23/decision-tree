@@ -1,6 +1,6 @@
 # Release notes
 
-## Unreleased
+## 0.5.0
 
 - Modes can define their own node types.
 - New `vocabulary` mode: a shared glossary of repo words for humans and agents.
