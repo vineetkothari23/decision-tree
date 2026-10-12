@@ -6,6 +6,7 @@ const { threads } = require("../core/comments.cjs");
 const { children } = require("../core/tree.cjs");
 const { treeConfig, LEGACY_CONFIG } = require("../config/legacy.cjs");
 const { initialStatus } = require("../config/roles.cjs");
+const { nodeTypesOf } = require("../core/policy/vocab.cjs");
 
 function renderText(tree, showBody = false) {
   const lines = [];
@@ -48,6 +49,7 @@ function renderConfig(cfg) {
     `fields: ${entries(cfg.fields, (e) => ` (${e.type})`)}`,
     `link types: ${Object.keys(cfg.link_types).join(", ") || "-"}`,
     `kinds: ${cfg.kinds.join(", ") || "-"}`,
+    `node types: ${Object.entries(nodeTypesOf(cfg)).map(([id, e]) => `${id} (${e.prefix}; kinds: ${(e.kinds || []).join(", ") || "-"})`).join(", ") || "-"}`,
     `labels: ${cfg.labels.join(", ") || "-"}`,
     `comments: ${cfg.comments.threads ? "threaded" : "flat"}`,
     `review requires kinds: ${cfg.review.required_kinds.join(", ") || "-"}`,

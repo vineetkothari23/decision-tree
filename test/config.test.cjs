@@ -50,6 +50,43 @@ test("default mode is lean: body, relates-to, active/accepted/rejected, threads"
   assert.deepEqual(cfg.review.required_kinds, []);
 });
 
+test("node types inherit, replace kinds, remove with null and survive config diffs", () => {
+  const store = project({
+    base: mode("base", "extends: default\nconfig:\n  node_types:\n    word:\n      name: Word\n      prefix: w\n      kinds: [common-noun, proper-noun]\n    term:\n      name: Term\n"),
+    child: mode("child", "extends: base\nconfig:\n  node_types:\n    word:\n      kinds: [proper-noun]\n    term: null\n"),
+  });
+  const cfg = resolve(store, "child").resolved_config;
+  assert.deepEqual(cfg.node_types.word, { name: "Word", prefix: "w", kinds: ["proper-noun"] });
+  assert.equal(cfg.node_types.word.description, undefined);
+  assert.deepEqual(cfg.node_types.word.kinds, ["proper-noun"], "child kinds replace the inherited list");
+  assert.deepEqual(cfg.node_types.word.prefix, "w");
+  assert.deepEqual(cfg.node_types.term, undefined, "null removes an inherited entry");
+  assert.equal(cfg.node_types.word.name, "Word");
+  assert.deepEqual(resolve(store, "base").resolved_config.node_types.term, {
+    name: "Term", prefix: "t", kinds: [],
+  });
+
+  const tree = newTree(store, "child");
+  const word = dt.addNode(tree, { parent: "g1", type: "word", kind: "proper-noun", title: "Decision Tree", author: AGENT });
+  const data = dt.treeToTemplate(tree, "copy", { parent: { name: "default", config: resolve(store, "default").resolved_config } });
+  assert.deepEqual(data.config.node_types, { word: { name: "Word", prefix: "w", kinds: ["proper-noun"] } });
+  assert.deepEqual([data.nodes[0].type, data.nodes[0].kind], ["word", "proper-noun"]);
+  const file = path.join(store.dir, "templates", "copy.yaml");
+  fs.writeFileSync(file, dt.stringifyYaml(data));
+  assert.deepEqual(resolve(store, "copy").resolved_config, cfg);
+  const copied = store.createTree("copied", "Copied", "", AGENT, resolve(store, "copy"));
+  assert.equal(copied.nodes.w2.type, "word");
+  assert.equal(copied.nodes.w2.kind, word.kind);
+});
+
+test("node type config rejects built-ins, bad prefixes, missing names and duplicate kinds", () => {
+  const invalid = (entry) => resolve(project({ bad: mode("bad", `config:\n  node_types:\n    ${entry}\n`) }), "bad");
+  err(() => invalid("note:\n      name: Note"), /node type "note" is built in/);
+  err(() => invalid("word:\n      name: Word\n      prefix: W1"), /prefix.*must match/);
+  err(() => invalid("word:\n      kinds: [noun]"), /missing "name"/);
+  err(() => invalid("word:\n      name: Word\n      kinds: [noun, noun]"), /"noun" is listed twice/);
+});
+
 test("feature-planning extends default with planning fields, links, pending and kinds", () => {
   const tpl = resolve(project(), "feature-planning");
   const cfg = tpl.resolved_config;
@@ -133,6 +170,42 @@ test("configured trees enforce their own vocabulary; legacy trees keep the old o
   dt.updateNode(legacy, q.id, { pros: ["a"], assignee: "me" }, AGENT);
   assert.equal(dt.addLink(legacy, q.id, "g1", null, AGENT).type, "depends-on");
   assert.equal(dt.summarize(legacy).needs_input, 1);
+});
+
+test("declared node types add, validate kinds, update and leave built-in kinds unchanged", () => {
+  const store = project({
+    vocabulary: mode("vocabulary", "extends: default\nconfig:\n  node_types:\n    word:\n      name: Word\n      prefix: w\n      kinds: [common-noun, proper-noun]\n  fields:\n    definition:\n      name: Definition\n      type: text_body\n"),
+  });
+  const tree = newTree(store, "vocabulary");
+  const word = dt.addNode(tree, { parent: "g1", type: "word", kind: "proper-noun", title: "Decision Tree", fields: { definition: "A planning tool." }, author: AGENT });
+  assert.equal(word.id, "w2");
+  assert.equal(word.kind, "proper-noun");
+  assert.equal(word.fields.definition, "A planning tool.");
+  err(() => dt.addNode(tree, { parent: "g1", type: "word", kind: "common-verb", title: "Bad", author: AGENT }), /invalid kind "common-verb"/);
+  err(() => dt.addNode(tree, { parent: "g1", type: "missing", title: "Bad", author: AGENT }), /invalid node type.*goal.*word/);
+
+  const note = dt.addNode(tree, { parent: "g1", type: "note", kind: "why", title: "Note", author: AGENT });
+  assert.equal(note.kind, null, "addNode continues dropping kinds from built-in non-questions");
+  err(() => dt.updateNode(tree, note.id, { type: "missing" }, AGENT), /invalid node type.*goal.*word/);
+  dt.updateNode(tree, note.id, { type: "word", kind: "common-noun" }, AGENT);
+  assert.equal(note.type, "word");
+  assert.equal(note.kind, "common-noun");
+  err(() => dt.updateNode(tree, note.id, { kind: "nope" }, AGENT), /invalid kind "nope"/);
+});
+
+test("stored mode configs without node_types still add and update built-in nodes", () => {
+  assert.deepEqual(dt.LEGACY_CONFIG.node_types, {});
+  const tree = newTree(project(), "feature-planning");
+  delete tree.config.node_types;
+  const question = dt.addNode(tree, { parent: "g1", kind: "how", title: "Question", author: AGENT });
+  const note = dt.addNode(tree, { parent: "g1", type: "note", kind: "why", title: "Note", author: AGENT });
+  assert.equal(question.kind, "how");
+  assert.equal(note.kind, null);
+  dt.updateNode(tree, question.id, { kind: "risk" }, AGENT);
+  dt.updateNode(tree, note.id, { type: "task", status: "active" }, AGENT);
+  assert.equal(question.kind, "risk");
+  assert.equal(note.type, "task");
+  assert.equal(note.status, "active");
 });
 
 test("custom statuses drive choose, review, inbox and summary through roles", () => {

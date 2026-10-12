@@ -3,14 +3,17 @@
 /** Whether a node's existing values (status, kind, labels, fields, link types) fit a config. */
 
 const { hasOwn } = require("../../util.cjs");
+const { NODE_TYPES } = require("../../constants.cjs");
+const { kindsFor, nodeTypesOf } = require("./vocab.cjs");
 
 const BUILTIN_VALUES = ["body", "pros", "cons", "rationale", "assignee"];
 
 /** Problems that would make `n` invalid under `cfg`, as short phrases ("q3 has status \"x\""). */
 function nodeConflicts(n, cfg) {
   const out = [];
+  if (!hasOwn(NODE_TYPES, n.type) && !hasOwn(nodeTypesOf(cfg), n.type)) out.push(`${n.id} has undeclared type ${JSON.stringify(n.type)}`);
   if (!hasOwn(cfg.statuses, n.status)) out.push(`${n.id} has status ${JSON.stringify(n.status)}`);
-  if (n.kind && !cfg.kinds.includes(n.kind)) out.push(`${n.id} has kind ${JSON.stringify(n.kind)}`);
+  if (n.kind && !kindsFor(cfg, n.type).includes(n.kind)) out.push(`${n.id} has kind ${JSON.stringify(n.kind)}`);
   for (const l of n.labels || []) if (!cfg.labels.includes(l)) out.push(`${n.id} has label ${JSON.stringify(l)}`);
   for (const f of BUILTIN_VALUES) {
     if (n[f] && n[f].length && !hasOwn(cfg.fields, f)) out.push(`${n.id} uses field ${JSON.stringify(f)}`);

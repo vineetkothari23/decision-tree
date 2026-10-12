@@ -19,6 +19,7 @@ Templates are an authoring format only: the created tree is stored as normal JSO
 | `feature-planning` | Planning a new feature | why, who, scope, success metrics (needs human sign-off), approach, data/API changes, placement, rollout (feature flag vs. big-bang options), testing, security/privacy risk |
 | `planning` | Planning a project made of several features | a Features question holding one `feature-planning` sub-tree |
 | `pr-review` | Reviewing a pull request | intent, scope, approach, edge cases/error handling, placement, risk, tests, docs, and a `Review verdict` decision with Approve / Request changes / Comment only options |
+| `vocabulary` | A shared glossary of repo-specific words | Functional and technical terms |
 
 Seeded questions carry a `body` of prompts telling you what to investigate. They are a starting
 point: add options with pros and cons for every question, add follow-up questions, delete
@@ -38,8 +39,8 @@ description: |               # optional: tree description when `dtree new` gets 
 tree_status: draft           # optional: draft|active|decided|implemented|archived
 nodes:                       # required, non-empty; attached under the root goal
   - title: Why migrate now?  # required
-    type: question           # optional, default question: question|option|decision|task|note|tree
-    kind: why                # optional, questions only: why|what|how|where|who|when|risk|other
+    type: question           # optional: a built-in type or an id declared by this mode
+    kind: why                # optional: question kind or kind allowed for a declared node type
     body: |                  # optional prompts or guidance
       - What breaks if we stay?
     status: open             # optional node status, default: the mode's first open status
@@ -58,7 +59,10 @@ keys are rejected with a file:line error.
 ## Mode config
 
 A template with `extends:` or `config:` is a **mode**: besides seed nodes it sets the tree's
-fields, statuses, link types, labels, kinds, review checks and comment threading.
+fields, statuses, link types, labels, kinds, review checks, comment threading and declared node
+types. `node_types` is keyed by type id; each entry requires a display `name` and may set a
+`prefix`, `description` and its own allowed `kinds`. Entries inherit and merge like other keyed
+sections (`word: null` removes one); declarations are available only in that mode's scope.
 
 ```yaml
 template: 1
@@ -78,6 +82,11 @@ config:                        # only what differs from the parent
   link_types:                  # keyed: <id>: {name}
     implements:
       name: Implements
+  node_types:                  # keyed: <id>: {name, prefix?, description?, kinds?}
+    word:
+      name: Word
+      prefix: w
+      kinds: [common-noun, proper-noun]
   labels: [frontend, backend]  # lists replace the parent's list
   kinds: [why, what, how, where, risk]
   review:

@@ -10,7 +10,8 @@ const { NODE_TYPES, TREE_STATUSES, TEMPLATE_VERSION, TEMPLATE_NAME_RE, TEMPLATE_
 const { DTError, isPlainObject, hasOwn } = require("../util.cjs");
 const { LEGACY_CONFIG } = require("../config/legacy.cjs");
 const { initialStatus } = require("../config/roles.cjs");
-const { parseConfig, BUILTIN_FIELDS } = require("../config/sections.cjs");
+const { CONFIG_ID_RE, parseConfig, BUILTIN_FIELDS } = require("../config/sections.cjs");
+const { kindsFor, nodeTypesOf } = require("../core/policy/vocab.cjs");
 const { LOCKS } = require("../core/policy/locks.cjs");
 
 const templateFail = (label) => (where, msg) => {
@@ -53,6 +54,7 @@ function validateTemplate(data, { label, name = null }) {
     fail("extends", `must be the name of another mode, got ${JSON.stringify(parent)}`);
   }
   const config = hasOwn(data, "config") ? parseConfig(data.config, fail) : null;
+  const configured = isConfigured({ extends: parent, config });
   const list = (v, where) => {
     if (v === undefined || v === null) return [];
     if (!Array.isArray(v)) fail(where, "must be a list");
@@ -76,8 +78,11 @@ function validateTemplate(data, { label, name = null }) {
     if (!nodeTitle) fail(where, 'missing required "title"');
     const type = raw.type ?? "question";
     if (type === "goal") fail(where, 'type "goal" is reserved for the root; use question, option, decision, task, note or tree');
-    if (!Object.keys(NODE_TYPES).includes(type)) {
-      fail(where, `invalid type ${JSON.stringify(type)}; expected one of: question, option, decision, task, note, tree`);
+    if (!Object.keys(NODE_TYPES).includes(type) && !CONFIG_ID_RE.test(type)) {
+      fail(where, `invalid type ${JSON.stringify(type)}; expected a built-in type or a lowercase id`);
+    }
+    if (!Object.keys(NODE_TYPES).includes(type) && !configured) {
+      fail(where, `custom node type ${JSON.stringify(type)} requires a configured mode`);
     }
     const mode = raw.mode ?? null;
     if (type === "tree" && (typeof mode !== "string" || !TEMPLATE_NAME_RE.test(mode))) {
@@ -85,7 +90,9 @@ function validateTemplate(data, { label, name = null }) {
     }
     if (type !== "tree" && mode !== null) fail(where, `"mode" is only allowed on tree nodes (this node is a ${type})`);
     const kind = id(raw.kind, where, "kind");
-    if (kind !== null && type !== "question") fail(where, `"kind" is only allowed on questions (this node is a ${type})`);
+    if (kind !== null && type !== "question" && hasOwn(NODE_TYPES, type)) {
+      fail(where, `"kind" is only allowed on questions or declared node types (this node is a ${type})`);
+    }
     for (const key of ["pros", "cons"]) {
       if (raw[key] !== undefined && raw[key] !== null && type !== "option") {
         fail(where, `${JSON.stringify(key)} is only allowed on options (this node is a ${type})`);
@@ -153,7 +160,10 @@ function checkNodes(nodes, cfg, fail) {
   };
   const walk = (list, prefix) => list.forEach((n, k) => {
     const where = `${prefix}[${k}]`;
-    if (n.kind !== null) known(n.kind, cfg.kinds, "kind", where);
+    if (!hasOwn(NODE_TYPES, n.type) && !hasOwn(nodeTypesOf(cfg), n.type)) {
+      fail(where, `node type ${JSON.stringify(n.type)} is not declared in this mode`);
+    }
+    if (n.kind !== null) known(n.kind, kindsFor(cfg, n.type), "kind", where);
     n.status = n.status ?? initialStatus(cfg);
     known(n.status, Object.keys(cfg.statuses), "status", where);
     for (const l of n.labels || []) known(l, cfg.labels, "label", where);

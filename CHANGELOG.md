@@ -1,5 +1,10 @@
 # Release notes
 
+## Unreleased
+
+- Modes can define their own node types.
+- New `vocabulary` mode: a shared glossary of repo words for humans and agents.
+
 ## 0.4.0
 
 - Modular templates: reuse other template trees as sub-trees in larger modes.

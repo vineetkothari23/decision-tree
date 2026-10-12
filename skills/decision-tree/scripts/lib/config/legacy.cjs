@@ -28,6 +28,7 @@ const LEGACY_CONFIG = deepFreeze({
   review: { required_kinds: ["why", "what", "how", "where"] },
   kinds: [...KINDS],
   labels: [],
+  node_types: {},
 });
 
 /** A tree's config: its own resolved mode config, or the legacy one for trees without `config`. */

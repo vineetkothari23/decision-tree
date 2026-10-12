@@ -12,6 +12,7 @@
 
 const { DTError, isPlainObject, hasOwn, same } = require("../util.cjs");
 const { ROLES, REQUIRED_ROLES } = require("./roles.cjs");
+const { NODE_TYPES } = require("../constants.cjs");
 
 const CONFIG_ID_RE = /^[a-z][a-z0-9_-]{0,39}$/;
 const FIELD_TYPES = ["text", "text_body", "list"];
@@ -24,7 +25,7 @@ function checkId(id, where, fail) {
   if (!CONFIG_ID_RE.test(id)) fail(where, `invalid id ${JSON.stringify(id)}: use lowercase letters, digits, '-' and '_', starting with a letter`);
 }
 
-function entriesSection(keys, finalizeEntry) {
+function entriesSection(keys, finalizeEntry, { listKeys = [] } = {}) {
   return {
     empty: () => ({}),
     parse(raw, where, fail) {
@@ -40,7 +41,12 @@ function entriesSection(keys, finalizeEntry) {
         if (!isPlainObject(entry)) fail(at, "must be a mapping (or null to remove an inherited entry)");
         for (const [k, v] of Object.entries(entry)) {
           if (!keys.includes(k)) fail(at, `unknown key ${JSON.stringify(k)} (allowed: ${keys.join(", ")})`);
-          if (typeof v !== "string") fail(at, `${JSON.stringify(k)} must be a string`);
+          if (listKeys.includes(k)) {
+            if (!Array.isArray(v)) fail(`${at}.${k}`, "must be a list of ids");
+            v.forEach((x, i) => (typeof x === "string" ? checkId(x, `${at}.${k}[${i}]`, fail) : fail(`${at}.${k}[${i}]`, "must be a string")));
+            const dup = v.find((x, i) => v.indexOf(x) !== i);
+            if (dup !== undefined) fail(`${at}.${k}`, `${JSON.stringify(dup)} is listed twice`);
+          } else if (typeof v !== "string") fail(at, `${JSON.stringify(k)} must be a string`);
         }
         out[id] = { ...entry };
       }
@@ -136,6 +142,13 @@ const listSection = {
 };
 
 const SECTIONS = {
+  node_types: entriesSection(["name", "prefix", "description", "kinds"], (id, e, at, fail) => {
+    if (hasOwn(NODE_TYPES, id)) fail(at, `node type ${JSON.stringify(id)} is built in`);
+    if (!e.name || !e.name.trim()) fail(at, 'missing "name"');
+    const prefix = e.prefix ?? id[0];
+    if (!/^[a-z]{1,3}$/.test(prefix)) fail(`${at}.prefix`, "must match /^[a-z]{1,3}$/");
+    return { prefix, kinds: e.kinds || [] };
+  }, { listKeys: ["kinds"] }),
   fields: entriesSection(["name", "type", "description"], (id, e, at, fail) => {
     if (!e.type) fail(at, `missing "type" (one of: ${FIELD_TYPES.join(", ")})`);
     if (!FIELD_TYPES.includes(e.type)) fail(at, `invalid type ${JSON.stringify(e.type)}; expected one of: ${FIELD_TYPES.join(", ")}`);

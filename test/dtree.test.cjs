@@ -476,7 +476,7 @@ test("template validation errors name the template and node path", () => {
   err({ ...base, nodes: [{ title: " " }] }, /nodes\[0\]: missing required "title"/);
   err({ ...base, nodes: [{}] }, /nodes\[0\]: must be a mapping|nodes\[0\]: missing required "title"/);
   err({ ...base, nodes: [{ title: "x", type: "goal" }] }, /nodes\[0\]: type "goal" is reserved/);
-  err({ ...base, nodes: [{ title: "x", type: "epic" }] }, /nodes\[0\]: invalid type "epic"/);
+  err({ ...base, nodes: [{ title: "x", type: "epic" }] }, /nodes\[0\]: custom node type "epic" requires a configured mode/);
   err({ ...base, nodes: [{ title: "x", kind: "huh" }] }, /nodes\[0\]: invalid kind "huh"/);
   err({ ...base, nodes: [{ title: "x", type: "task", kind: "why" }] }, /nodes\[0\]: "kind" is only allowed on questions/);
   err({ ...base, nodes: [{ title: "x", status: "maybe" }] }, /nodes\[0\]: invalid status "maybe"/);
@@ -585,7 +585,50 @@ test("built-in templates shipped with the skill parse and validate", () => {
     const tpl = dt.resolveTemplate(store, loaded.name, { allowPath: false });
     const tree = store.createTree("t", "T", "", AGENT, tpl);
     assert.equal(tree.template, tpl.name);
+    if (loaded.name === "vocabulary") {
+      assert.deepEqual(tree.config.node_types.word.kinds, ["common-noun", "proper-noun", "slang", "short-form", "abbreviation", "phrase", "entity"]);
+      assert.deepEqual(Object.values(tree.nodes).filter((n) => n.parent === "g1").map((n) => n.title), ["Functional terms", "Technical terms"]);
+    }
   }
+});
+
+test("templates accept declared node types and reject custom types without a declaration", () => {
+  assert.throws(() => dt.validateTemplate(yaml(
+    "template: 1\nname: legacy-word\ntitle: Legacy word\nnodes:\n  - title: Decision Tree\n    type: word\n"), { label: '"legacy-word"' }), /custom node type "word" requires a configured mode/);
+
+  const dir = tmpdir(), env = { XDG_CONFIG_HOME: tmpdir() };
+  const source = path.join(dir, "undeclared.yaml");
+  fs.writeFileSync(source,
+    "template: 1\nname: undeclared\ntitle: Undeclared\nextends: default\nconfig:\n  labels: [glossary]\nnodes:\n  - title: Decision Tree\n    type: word\n");
+  const r = cliEnv(dir, env, SCRIPT, "create-mode", "undeclared", "--yaml", source);
+  assert.equal(r.code, 1);
+  assert.match(r.err, /nodes\[0\].*node type "word" is not declared in this mode/);
+});
+
+test("CLI: vocabulary mode adds words, kinds, fields, links and reviews without gaps", () => {
+  const dir = tmpdir(), env = { XDG_CONFIG_HOME: tmpdir() };
+  let r = cliEnv(dir, env, SCRIPT, "new", "Vocabulary", "--id", "vocabulary", "--mode", "vocabulary");
+  assert.equal(r.code, 0, r.err);
+  let tree = JSON.parse(cliEnv(dir, env, SCRIPT, "show", "vocabulary", "--json").out);
+  const groups = Object.values(tree.nodes).filter((n) => n.type === "note");
+  assert.equal(groups.length, 2);
+
+  r = cliEnv(dir, env, SCRIPT, "add", "vocabulary", "-p", groups[0].id, "-t", "word", "-k", "proper-noun",
+    "--title", "Decision Tree", "--field", "definition=A planning tool for repo-specific decisions.");
+  assert.equal(r.code, 0, r.err);
+  r = cliEnv(dir, env, SCRIPT, "add", "vocabulary", "-p", groups[1].id, "-t", "word", "-k", "abbreviation",
+    "--title", "dtree", "--field", "definition=The command-line executable.");
+  assert.equal(r.code, 0, r.err);
+
+  tree = JSON.parse(cliEnv(dir, env, SCRIPT, "show", "vocabulary", "--json").out);
+  const words = Object.values(tree.nodes).filter((n) => n.type === "word");
+  assert.deepEqual(words.map((n) => n.kind), ["proper-noun", "abbreviation"]);
+  assert.equal(words[0].fields.definition, "A planning tool for repo-specific decisions.");
+  r = cliEnv(dir, env, SCRIPT, "link", "vocabulary", words[0].id, words[1].id, "--type", "aka");
+  assert.equal(r.code, 0, r.err);
+  assert.match(cliEnv(dir, env, SCRIPT, "show", "vocabulary").out, /aka/);
+  assert.match(cliEnv(dir, env, SCRIPT, "config", "vocabulary").out, /node types: word \(w; kinds: common-noun, proper-noun, slang, short-form, abbreviation, phrase, entity\)/);
+  assert.match(cliEnv(dir, env, SCRIPT, "review", "vocabulary").out, /no gaps found/);
 });
 
 test("createTree seeds template nodes in order, nested, in one write", () => {
