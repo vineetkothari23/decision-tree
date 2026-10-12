@@ -14,7 +14,7 @@ const { chooseOption } = require("../core/choose.cjs");
 const { addComment, resolveComment } = require("../core/comments.cjs");
 const { DraftStore } = require("../store/drafts.cjs");
 const { listTemplates } = require("../templates/lookup.cjs");
-const { resolveTemplate } = require("../templates/resolve.cjs");
+const { resolveTemplate, DEFAULT_TREE_MODE } = require("../templates/resolve.cjs");
 const { resolveSubtree, resolveMode } = require("../templates/subtrees.cjs");
 const { addSubtree } = require("../templates/apply.cjs");
 const { validateTemplateName } = require("../templates/schema.cjs");
@@ -55,7 +55,7 @@ const treeRoutes = (coll) => {
         const node = {
           ...nodeChanges(configUnder(tree, body.parent), body),
           parent: need(body, "parent"),
-          type: body.type || "question",
+          type: body.type || null,
           title: body.title || "",
           kind: body.kind || null,
           status: body.status || null,
@@ -158,8 +158,8 @@ const ROUTES = [
       const title = String(body.title || "").trim();
       if (!title) throw new DTError("title is required");
       const slug = validateSlug(body.id || slugify(title));
-      const template = body.template ? resolveMode(store, String(body.template), { allowPath: false }) : null;
-      const description = body.description || (template ? template.description : "");
+      const template = resolveMode(store, String(body.template || DEFAULT_TREE_MODE), { allowPath: false });
+      const description = body.description || template.description;
       return store.createTree(slug, title, description, requestAuthor(body), template);
     },
   },

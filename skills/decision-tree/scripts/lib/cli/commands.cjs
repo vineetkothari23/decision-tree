@@ -22,7 +22,7 @@ const { renderText, renderTemplate, renderTreeConfig } = require("../render/text
 const { renderStaticHtml, snapshotPayload } = require("../render/static.cjs");
 const { countTemplateNodes } = require("../templates/schema.cjs");
 const { listTemplates, templateDirs } = require("../templates/lookup.cjs");
-const { resolveTemplate, treeParent } = require("../templates/resolve.cjs");
+const { resolveTemplate, treeParent, DEFAULT_TREE_MODE } = require("../templates/resolve.cjs");
 const { resolveSubtree, resolveMode } = require("../templates/subtrees.cjs");
 const { addSubtree } = require("../templates/apply.cjs");
 const { exportTemplate } = require("../templates/export.cjs");
@@ -83,11 +83,12 @@ const STORE_COMMANDS = {
     const o = a.values;
     const slug = validateSlug(o.id || slugify(a.title));
     const name = o.template ?? o.mode;
-    const template = name !== undefined ? resolveMode(store, name) : null;
+    const template = resolveMode(store, name ?? DEFAULT_TREE_MODE);
     const description = o.description ?? (template ? template.description : "");
     const tree = store.createTree(slug, a.title, description, author, template);
-    const seeded = template ? ` and ${countTemplateNodes(template.nodes)} node(s) from template ${template.name}` : "";
-    return [tree, `created tree ${tree.id} with root goal ${tree.root_id}${seeded} at ${store.treePath(tree.id)}`];
+    const count = countTemplateNodes(template.nodes);
+    const seeded = count ? ` and ${count} node(s) from template ${template.name}` : "";
+    return [tree, `created tree ${tree.id} with root ${tree.nodes[tree.root_id].type} ${tree.root_id}${seeded} at ${store.treePath(tree.id)}`];
   },
 
   templates: listModes,
@@ -214,7 +215,7 @@ const STORE_COMMANDS = {
 const TREE_EDITS = {
   add(a, tree, author, store) {
     const o = a.values;
-    const type = o.type || (o.mode ? "tree" : "question");
+    const type = o.type || (o.mode ? "tree" : null);
     if (o.mode && type !== "tree") throw new UsageError("--mode only applies to tree nodes (-t tree)");
     const node = {
       parent: o.parent,

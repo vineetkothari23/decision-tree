@@ -26,7 +26,7 @@ usage: dtree <command> [options]
   config [<tree>] [--mode name]               a tree's (or mode's) statuses, fields, link types, kinds, labels
   show <tree> [--body]                        print a tree
   node <tree> <node>                          print one node with its comment threads
-  add <tree> -p <parent> [-t question|option|decision|task|note|tree or a type the mode declares] [-k kind] --title T
+  add <tree> -p <parent> [-t <type the mode declares>|node|tree] [-k kind] --title T
       [-b body] [-s status] [--pro P]... [--con C]... [--assignee A] [--label L]... [--field id=V]...
       [--lock children|subtree]
   add <tree> -p <parent> -t tree --mode <name> --title T
@@ -35,7 +35,7 @@ usage: dtree <command> [options]
       [--con C]... [-r rationale] [--assignee A] [--label L]... [--field id=V]... [--parent new-parent]
                                               (--label replaces the node's labels; --label "" clears them)
   status <tree> <node> <status>               set node status
-  choose <tree> <option> [-r rationale] [--keep-siblings]
+  choose <tree> <node> [-r rationale] [--keep-siblings]   (modes with features.choose)
   comment <tree> <node> "<text>" [--reply-to cID]
   resolve <tree> <node> <cID> [--reopen]
   link <tree> <src> <dst> [--type T]          default type: the tree's first link type
@@ -46,7 +46,7 @@ usage: dtree <command> [options]
   delete <tree> <node>                        delete a node and its subtree
   set-tree <tree> [--title T] [-d desc] [--status draft|active|decided|implemented|archived]
   inbox [tree] [--for agent|human]            items waiting on agents (default) or humans
-  review <tree>                               gaps: unasked why/what/how/where, <2 options, ...
+  review <tree>                               gaps: required kinds, broken node-type rules, unanswered comments
   serve [--port 8765] [--host 127.0.0.1] [--scan DIR]... [--extra-project DIR]...
   render -o out.html [--tree slug]            self-contained read-only HTML snapshot
   install-skill [--dir DIR] [--force]         copy the agent skill to DIR/decision-tree

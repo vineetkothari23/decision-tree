@@ -119,7 +119,7 @@ nodes:                         # required, non-empty; added under the root goal 
     kind: how
     children:                  # optional, same shape, any depth
       - title: Versioned endpoint
-        type: option           # question (default)|option|decision|task|note — never goal
+        type: option           # any type the mode declares; omitted = its default type (question)
         pros: [No breakage]    # options only
         cons: [Two code paths]
   - title: Update the changelog
@@ -143,7 +143,7 @@ flow mappings and `? ` keys are rejected with `file:line` errors; indent with sp
 Templates with `extends:` or `config:` also configure the tree: its fields, statuses (each with a
 role), link types, labels, question kinds, review checks and comment threading. See
 [`skills/decision-tree/templates/README.md`](skills/decision-tree/templates/README.md#mode-config)
-for the format, inheritance rules and the built-in `default` mode. `dtree config <tree>` shows a
+for the format, inheritance rules and the built-in `base` and `decision-tree` modes. `dtree config <tree>` shows a
 tree's settings; `dtree lock <tree> <node> [--scope children|subtree]` / `dtree unlock` stop new
 branches; `--label` and `--field id=value` on `add`/`update` set labels and custom fields.
 

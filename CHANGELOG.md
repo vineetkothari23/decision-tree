@@ -4,6 +4,12 @@
 
 - Modes can define their own node types.
 - New `vocabulary` mode: a shared glossary of repo words for humans and agents.
+- The code owns only a generic node and tree; goal/question/option/decision/task/note move to the new `decision-tree` mode, the default for `dtree new`.
+- `default` mode renamed `base`; `extends: default` still works (as `decision-tree`).
+- Node types can set their own fields, statuses, color, root/default role and rules (`level: warn` or `block`).
+- Choose and assignee are opt-in mode features.
+- Node types without a color get a stable automatic one.
+- Drag a node onto another in the viewer to re-parent it.
 
 ## 0.4.1
 

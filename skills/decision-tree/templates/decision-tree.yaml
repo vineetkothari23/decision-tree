@@ -1,0 +1,94 @@
+# Built-in decision-tree mode: goals, questions, options, decisions, tasks and notes. The default
+# mode for `dtree new`. Its review checks are node-type rules; choose and assignee are opt-in features.
+# Keep node_types/features in sync with lib/config/compat.cjs (old trees use the same vocabulary).
+template: 1
+name: decision-tree
+title: Decision tree
+description: Question-driven decisions; options with pros and cons, choose with a rationale.
+extends: base
+config:
+  fields:
+    pros:
+      name: Pros
+      type: list
+    cons:
+      name: Cons
+      type: list
+    rationale:
+      name: Rationale
+      type: text_body
+  kinds: [why, what, how, where, who, when, risk, other]
+  features:
+    assignee: true
+    choose:
+      type: option
+  node_types:
+    goal:
+      name: Goal
+      prefix: g
+      color: "#7c3aed"
+      root: true
+    question:
+      name: Question
+      prefix: q
+      color: "#2563eb"
+      default: true
+      rules:
+        - when:
+            not:
+              role: [accepted, rejected, closed]
+          require: at-least 2
+          of:
+            children: 1
+            type: option
+          message: open question has {count} option(s); propose at least 2
+        - when:
+            role: accepted
+          require: any
+          of:
+            children: 1
+            type: option
+          where:
+            role: accepted
+          message: marked decided but no option is chosen
+        - when:
+            role: blocked
+          where:
+            linked: true
+          message: blocked but no link explains why
+    option:
+      name: Option
+      prefix: o
+      color: "#d97706"
+      rules:
+        - when:
+            not:
+              role: [rejected, closed]
+          where:
+            filled: [pros, cons]
+          message: option lacks pros and/or cons
+        - when:
+            role: accepted
+          where:
+            filled: rationale
+          message: chosen option has no rationale
+        - when:
+            role: accepted
+          require: any
+          of:
+            children: 1
+            type: question
+          message: chosen option has no follow-up questions (how/where/what next?)
+    decision:
+      name: Decision
+      prefix: d
+      color: "#059669"
+    task:
+      name: Task
+      prefix: t
+      color: "#0891b2"
+    note:
+      name: Note
+      prefix: n
+      color: "#64748b"
+nodes: []

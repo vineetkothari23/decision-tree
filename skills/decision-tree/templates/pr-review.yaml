@@ -9,7 +9,7 @@ description: |
   placement, risk, tests and docs, record findings under each question, then
   choose a verdict with a rationale.
 tree_status: active
-extends: default
+extends: decision-tree
 config:
   fields:
     pros:

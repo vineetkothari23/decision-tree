@@ -166,7 +166,7 @@ test("moving across a scope boundary re-checks the moved subtree", () => {
   const top = sub.parent;
   const q = dt.addNode(tree, { parent: sub.id, title: "Q", kind: "risk", status: "pending", author: AGENT });
   const opt = dt.addNode(tree, { parent: q.id, type: "option", title: "O", pros: ["fast"], author: AGENT });
-  err(() => dt.moveNode(tree, q.id, top, AGENT), new RegExp(`cannot move ${q.id} under ${top}: .*${q.id} has status "pending".*${opt.id} uses field "pros"`));
+  err(() => dt.moveNode(tree, q.id, top, AGENT), new RegExp(`cannot move ${q.id} under ${top}: .*${q.id} has status "pending"`));
   assert.equal(tree.nodes[q.id].parent, sub.id);
   dt.updateNode(tree, q.id, { status: "active", kind: "" }, AGENT);
   dt.updateNode(tree, opt.id, { pros: [] }, AGENT);

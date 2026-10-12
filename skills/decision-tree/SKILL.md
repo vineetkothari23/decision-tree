@@ -13,7 +13,7 @@ Use this skill whenever you plan a feature, design change, or any non-trivial te
 - One JSON file per feature tree: `.decisions/<tree-slug>.json`.
 - `.decisions/_tool/` holds a vendored copy of the tool (`dtree.cjs`, `lib/`, `viewer.html`, built-in `templates/`) so anyone can run it without this skill. `.decisions/templates/` holds the project's own tree templates.
 - Node types: `goal` (root, one per tree), `question`, `option`, `decision`, `task`, `note`. Question kinds: `why what how where who when risk other`.
-- A tree's node statuses, fields, link types, labels and question kinds come from its mode: run `dt config <tree>` before editing. `feature-planning` uses `active pending accepted rejected` (pending = waiting on a human); `default` uses `active accepted rejected`. Trees without a mode use `open exploring needs-input blocked decided chosen rejected deferred done`. Tree statuses: `draft active decided implemented archived`.
+- A tree's node statuses, fields, link types, labels and question kinds come from its mode: run `dt config <tree>` before editing. `feature-planning` uses `active pending accepted rejected` (pending = waiting on a human); `base` and `decision-tree` (the default for `dt new`) use `active accepted rejected`. Trees without a mode use `open exploring needs-input blocked decided chosen rejected deferred done`. Tree statuses: `draft active decided implemented archived`.
 - Every node has: `title`, the mode's fields (built-ins `body`, `pros[]`, `cons[]`, `rationale`, `assignee`; others under `fields`), optional `labels[]` and `lock`, `links[]` (typed graph edges), `comments[]` (threaded via `reply_to`, `resolved` flag, `author_type` = `agent` | `human`), `history[]`. Trees also keep an `activity` log and a `revision` counter.
 - IDs are short and stable: `g1`, `q2`, `o3`, `c4` (comments share the counter). Never edit the JSON by hand while the server may be running; use the CLI (it locks and writes atomically).
 
@@ -76,7 +76,7 @@ A mode may also set the tree's vocabulary with `extends:` and `config:`; only di
 template: 1
 name: team-planning
 title: Team planning
-extends: feature-planning      # optional; a mode with `config:` and no `extends:` extends `default`
+extends: feature-planning      # optional; a mode with `config:` and no `extends:` extends `decision-tree` (`default` is an alias)
 config:                        # only what differs from the parent
   fields:                      # keyed: <id>: {name, type}; type is text | text_body | list
     effort:
@@ -105,7 +105,7 @@ nodes:                         # may be empty in a mode that has config; seed no
     lock: children             # children | subtree: blocks add/move/delete below it
 ```
 
-Built-in `default` is lean: field `body`, link type `relates-to`, statuses `active` (open),
+Built-in `base` is lean: field `body`, link type `relates-to`, statuses `active` (open),
 `accepted` and `rejected`, threaded comments, no kinds or labels. `feature-planning` and
 `pr-review` extend it (adding pros/cons/rationale, more link types, kinds and, for planning,
 a `pending` status). Every status has a role: `open` (the first one is the default for new
@@ -113,7 +113,7 @@ nodes), `waiting` (shows in the human inbox), `blocked`, `accepted` (choosing an
 last accepted status on it and the first on its parent), `rejected` (its siblings), `closed`.
 Each mode needs at least one open, accepted and rejected status. Lookup follows the template
 search order; a mode that extends its own name inherits from the next location down (so a
-project `default.yaml` with `extends: default` customizes the built-in for every mode). At most
+project `base.yaml` with `extends: base` customizes the built-in for every mode). At most
 8 modes deep; cycles are rejected. A new tree stores its mode name and the fully resolved config,
 so editing or removing the mode later never changes existing trees. Trees created without a mode,
 or before modes had config, keep the original fixed vocabulary.
@@ -133,7 +133,7 @@ dt remove-mode custom-planning [--user]                                # project
 
 `create-mode` validates the file (nothing is written on error), forces its `name:` to the mode name, and refuses to overwrite an existing mode without `--force`. To capture a real tree's structure as a template: `dt template export <tree> -o ./custom-planning.yaml` (keeps titles, types, kinds, bodies, pros/cons and nesting; drops statuses, comments and history), then `create-mode` it; humans can do the same from the viewer with "Save as template". `dt init --templates` writes a commented `.decisions/templates/example.yaml`.
 
-Format (`template: 1`): top-level `template`, `name` (= file name), `title`, optional `description`, `tree_status`, and a non-empty `nodes` list; each node has `title` and optional `type` (question default, option, decision, task, note, tree — never goal), `kind` (questions only), `body`, `status`, `assignee`, `pros`/`cons` (options only) and `children`. A `type: tree` node with `mode: <name>` is a sub-tree: the nodes below it use that mode's config (seeded from the mode unless it lists `children:`); the tree node itself follows its parent. Add one with `dt add <tree> -p <node> -t tree --mode feature-planning --title "Feature: X"`; moving nodes into or out of a sub-tree is refused if their values don't fit there. Only a YAML subset is accepted: comments, mappings, `- ` lists, quoted/plain scalars, one-line `[a, b]` lists, `|`/`>` blocks; anchors, aliases, tags, flow mappings and tabs are rejected with `file:line` errors.
+Format (`template: 1`): top-level `template`, `name` (= file name), `title`, optional `description`, `tree_status`, and a non-empty `nodes` list; each node has `title` and optional `type` (the mode's default type when omitted, e.g. question in decision-tree; never its root type), `kind`, `body`, `status`, `assignee`, `pros`/`cons` and `children`. A `type: tree` node with `mode: <name>` is a sub-tree: the nodes below it use that mode's config (seeded from the mode unless it lists `children:`); the tree node itself follows its parent. Add one with `dt add <tree> -p <node> -t tree --mode feature-planning --title "Feature: X"`; moving nodes into or out of a sub-tree is refused if their values don't fit there. Only a YAML subset is accepted: comments, mappings, `- ` lists, quoted/plain scalars, one-line `[a, b]` lists, `|`/`>` blocks; anchors, aliases, tags, flow mappings and tabs are rejected with `file:line` errors.
 
 ## Command reference
 

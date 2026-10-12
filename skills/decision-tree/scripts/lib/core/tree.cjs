@@ -5,11 +5,13 @@
  * What a node accepts (statuses, kinds, fields, labels, link types) comes from its scope's config via core/policy.
  */
 
-const { NODE_TYPES, TREE_STATUSES, ACTIVITY_LIMIT } = require("../constants.cjs");
+const { TREE_STATUSES, ACTIVITY_LIMIT } = require("../constants.cjs");
 const { DTError, now, same, choice, hasOwn, isPlainObject } = require("../util.cjs");
 const { configAt, configUnder, scopeRoot } = require("../config/scope.cjs");
-const { initialStatus } = require("../config/roles.cjs");
-const { checkStatus, checkKind, nodeTypesOf, linkType } = require("./policy/vocab.cjs");
+const {
+  checkKind, linkType, checkType, defaultType, rootType, prefixOf, checkTypeStatus, initialStatusFor, checkTypeField,
+} = require("./policy/vocab.cjs");
+const { blockingRules } = require("./policy/rules.cjs");
 const { isEmptyValue, fieldValue, readField, writeField, fieldPath } = require("./policy/fields.cjs");
 const { labelsValue } = require("./policy/labels.cjs");
 const { lockValue, assertUnlocked } = require("./policy/locks.cjs");
@@ -50,16 +52,17 @@ function fieldValues(cfg, values) {
   return out;
 }
 
-function addNode(tree, { parent, type = "question", title, body = "", kind = null, status = null, author = null,
+function addNode(tree, { parent, type = null, title, body = "", kind = null, status = null, author = null,
   pros = null, cons = null, assignee = "", rationale = "", fields = {}, labels = null, lock = null, mode = null, config = null }) {
   const cfg = configUnder(tree, parent);
-  const declaredTypes = nodeTypesOf(cfg);
-  choice(type, [...Object.keys(NODE_TYPES), ...Object.keys(declaredTypes)], "node type");
+  const isRoot = parent === null || parent === undefined;
+  type = type || (isRoot ? rootType(cfg) : defaultType(cfg));
+  checkType(cfg, type);
   if (type === "tree" && (!mode || !isPlainObject(config))) {
     throw new DTError("a tree node needs a mode (dtree add <tree> -p <parent> -t tree --mode <name> --title T)");
   }
-  const st = checkStatus(cfg, status || initialStatus(cfg));
-  const k = type === "question" || hasOwn(declaredTypes, type) ? checkKind(cfg, kind, type) : null;
+  const st = checkTypeStatus(cfg, status || initialStatusFor(cfg, type), type);
+  const k = checkKind(cfg, kind, type);
   if (parent !== null && parent !== undefined) {
     getNode(tree, parent);
     assertUnlocked(tree, parent, "add a node here");
@@ -69,9 +72,10 @@ function addNode(tree, { parent, type = "question", title, body = "", kind = nul
   if (!title || !String(title).trim()) throw new DTError("title is required");
   if (!isPlainObject(fields)) throw new DTError("fields must be a mapping of field id to value");
   const values = fieldValues(cfg, { body, pros, cons, rationale, assignee, ...fields });
+  for (const id of Object.keys(values)) checkTypeField(cfg, id, type);
   const nodeLabels = labelsValue(cfg, labels);
   const nodeLock = lockValue(lock);
-  const nid = `${declaredTypes[type]?.prefix || NODE_TYPES[type]}${tree.next_id}`;
+  const nid = `${prefixOf(cfg, type)}${tree.next_id}`;
   tree.next_id += 1;
   const ts = now();
   const node = {
@@ -115,10 +119,10 @@ function updateNode(tree, nid, changes, author) {
     } else if (NODE_KEYS.includes(key)) {
       let value = raw;
       const newType = changes.type ?? node.type;
-      if (key === "status") checkStatus(cfg, value);
+      if (key === "status") checkTypeStatus(cfg, value, newType);
       else if (key === "kind") value = checkKind(cfg, value || null, newType);
       else if (key === "type") {
-        choice(value, [...Object.keys(NODE_TYPES), ...Object.keys(nodeTypesOf(cfg))], "node type");
+        checkType(cfg, value);
         if ((value === "tree") !== (node.type === "tree")) throw new DTError(`cannot change ${nid} from ${node.type} to ${value}: add a tree node with --mode instead`);
       }
       else if (key === "labels") value = labelsValue(cfg, value);
@@ -130,6 +134,13 @@ function updateNode(tree, nid, changes, author) {
       throw new DTError(`field ${JSON.stringify(key)} is not editable` +
         ` (editable: ${[...NODE_KEYS, ...Object.keys(cfg.fields)].join(", ")})`);
     }
+  }
+  const newType = changes.type ?? node.type;
+  for (const [, fieldId] of updates) if (fieldId) checkTypeField(cfg, fieldId, newType);
+  const newStatus = updates.find(([label]) => label === "status");
+  if (newStatus && newStatus[2] !== node.status) {
+    const broken = blockingRules(tree, { ...node, type: newType }, newStatus[2], cfg);
+    if (broken.length) throw new DTError(`cannot set ${nid} to ${newStatus[2]}: ${broken.join("; ")}`);
   }
   const changed = [];
   for (const [label, fieldId, value] of updates) {

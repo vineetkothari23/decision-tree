@@ -6,12 +6,13 @@ const { threads } = require("../core/comments.cjs");
 const { configAt } = require("../config/scope.cjs");
 const { hasRole, isDone } = require("../config/roles.cjs");
 const { inbox } = require("./inbox.cjs");
+const { defaultType } = require("../core/policy/vocab.cjs");
 
 function summarize(tree) {
   const nodes = Object.values(tree.nodes);
   const byStatus = {};
   for (const n of nodes) byStatus[n.status] = (byStatus[n.status] || 0) + 1;
-  const openQ = nodes.filter((n) => n.type === "question" && !isDone(configAt(tree, n.id), n.status)).length;
+  const openQ = nodes.filter((n) => n.type === defaultType(configAt(tree, n.id)) && !isDone(configAt(tree, n.id), n.status)).length;
   const unresolved = nodes.reduce((acc, n) => acc + threads(n).filter((t) => !t[0].resolved).length, 0);
   return {
     id: tree.id,

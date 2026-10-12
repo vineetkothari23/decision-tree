@@ -88,6 +88,7 @@ main{display:flex;flex-direction:column;min-width:0}
 #outline li{margin:3px 0}
 .orow{display:flex;align-items:center;gap:7px;padding:4px 8px;border-radius:6px;cursor:pointer;border-left:4px solid var(--c);background:#fff;border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
 .orow.sel{outline:2px solid var(--accent)}
+.card.drop,.orow.drop{outline:2px dashed var(--accent);outline-offset:2px}
 .orow.dim{opacity:.3}
 .orow .ty{font-size:10.5px;font-weight:700;color:var(--c);text-transform:uppercase;min-width:74px}
 .orow .tt{flex:1}
@@ -146,8 +147,10 @@ dialog::backdrop{background:rgba(20,24,36,.35)}
 const STATIC = window.DTREE_STATIC || null;
 const RO = !!STATIC;
 if (RO) document.body.classList.add("ro");
-const COLORS = {goal:"var(--goal)",question:"var(--question)",option:"var(--option)",decision:"var(--decision)",task:"var(--task)",note:"var(--note)",tree:"var(--tree)"};
-const colorOf = type => COLORS[type] || COLORS.note;
+const BUILTIN_COLORS = {node:"var(--note)", tree:"var(--tree)"};
+// A type without a configured color gets a stable one derived from its id (same in every reload and snapshot).
+const hashColor = t => { let h = 0; for (const c of t) h = (h * 31 + c.charCodeAt(0)) >>> 0; return `hsl(${h % 360} 55% 42%)`; };
+const colorOf = type => { for (const C of S.tree ? scopes() : []) { const c = nodeTypesOf(C)[type]?.color; if (c) return c; } return BUILTIN_COLORS[type] || hashColor(type); };
 const W = 240, H = 84, GX = 70, GY = 18;
 const S = {projects:[], meta:null, pid:null, slug:null, coll:"trees", tree:null, sel:null, view:localStorage.getItem("dt.view")||"graph",
   q:"", fstatus:"", collapsed:new Set(), zoom:1, panX:40, panY:40, dirty:false, online:true, needFit:true};
@@ -170,7 +173,21 @@ const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const cfg = () => (S.tree && S.tree.config) || S.meta.legacy_config;
 const isScope = n => !!(n && n.type === "tree" && n.config);
 const nodeTypesOf = C => C.node_types || {};
-const kindsFor = (C, type) => S.meta.node_types.includes(type) ? C.kinds : (nodeTypesOf(C)[type]?.kinds || []);
+const defaultTypeOf = C => Object.keys(nodeTypesOf(C)).find(t => nodeTypesOf(C)[t].default) || "node";
+const kindsFor = (C, type) => { const own = nodeTypesOf(C)[type]?.kinds || []; return own.length ? own : (type === defaultTypeOf(C) ? C.kinds || [] : []); };
+const chooseOf = id => (cfgAt(id).features || {}).choose || null;
+// Drag a node onto another to re-parent it; the server applies the usual move checks (cycles, locks, scopes).
+const dnd = id => RO ? {} : {
+  draggable: id !== S.tree.root_id ? "true" : null,
+  ondragstart: e => { e.stopPropagation(); e.dataTransfer.setData("text/dtree-node", id); e.dataTransfer.effectAllowed = "move"; },
+  ondragover: e => { if (e.dataTransfer.types.includes("text/dtree-node")) { e.preventDefault(); e.currentTarget.classList.add("drop"); } },
+  ondragleave: e => e.currentTarget.classList.remove("drop"),
+  ondrop: e => {
+    e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove("drop");
+    const src = e.dataTransfer.getData("text/dtree-node"), ns = nodes();
+    if (src && src !== id && ns[src] && ns[src].parent !== id) mutate("PATCH", `/nodes/${src}`, {parent:id});
+  },
+};
 function cfgAt(id){
   const ns = nodes(), seen = new Set([id]);
   for (let p = hasOwn(ns, id) ? ns[id].parent : null; p && hasOwn(ns, p) && !seen.has(p); p = ns[p].parent){ seen.add(p); if (isScope(ns[p])) return ns[p].config; }
@@ -181,14 +198,13 @@ const scopes = () => [cfg(), ...Object.values(nodes()).filter(isScope).map(n => 
 const roleOf = (st, id) => { const C = cfgAt(id); return hasOwn(C.statuses, st) ? C.statuses[st].role : null; };
 const withRole = (r, id) => Object.keys(cfgAt(id).statuses).filter(st => roleOf(st, id) === r);
 const statusName = (st, id) => { const C = id ? cfgAt(id) : scopes().find(c => hasOwn(c.statuses, st)) || cfg(); return hasOwn(C.statuses, st) ? C.statuses[st].name : st; };
-const isChosen = n => n.type === "option" && n.status === withRole("accepted", n.id).slice(-1)[0];
+const isChosen = n => { const ch = chooseOf(n.id); return !!ch && n.type === ch.type && n.status === (ch.chosen || withRole("accepted", n.id).slice(-1)[0]); };
 const fieldVal = (n, id) => S.meta.builtin_fields.includes(id) ? n[id] : (n.fields || {})[id];
 const pill = (st, id) => el("span", {class:`pill s-${st} r-${roleOf(st, id)}`, title:statusName(st, id)}, st);
 const modeBadge = n => n.type === "tree" ? el("span", {class:"badge mode", title:`sub-tree: nodes below it use mode ${n.mode}`}, (S.tree.draft ? "uses " : "") + n.mode) : "";
 const typeLabel = n => {
-  if (n.type === "question" && n.kind) return "Q · " + n.kind;
   const declared = nodeTypesOf(cfgAt(n.id))[n.type];
-  return declared ? declared.name + (n.kind ? " · " + n.kind : "") : n.type;
+  return (declared ? declared.name : n.type) + (n.kind ? " · " + n.kind : "");
 };
 const fmt = ts => ts ? new Date(ts).toLocaleString() : "";
 const ago = ts => { if (!ts) return ""; const s=(Date.now()-new Date(ts))/1000;
@@ -319,7 +335,7 @@ function newTreeDialog(p){
   const tpl = el("select", {id:"new-tree-template", onchange:() => {
     const t = tpls.find(x => x.name === tpl.value);
     desc.placeholder = t && t.description ? `${t.description}\n(used when left empty)` : DESC_HINT;
-  }}, el("option", {value:""}, "Blank tree (no template)"));
+  }}, el("option", {value:""}, "Default mode (decision-tree)"));
   let tpls = [];
   if (!RO) api("GET", `/projects/${p.id}/templates`).then(rows => {
     tpls = rows.filter(r => r.active && !r.error);
@@ -345,7 +361,7 @@ function modeDialog(p){
   const name = el("input", {placeholder:"e.g. team-planning"}), base = el("select", {});
   const how = el("select", {}, el("option", {value:"extend"}, "extend it: start blank, inherit its settings"), el("option", {value:"copy"}, "copy it: its questions and settings"));
   api("GET", `/projects/${p.id}/templates`).then(rows => base.append(...rows.filter(r => r.active && !r.error)
-    .map(r => el("option", {value:r.name, selected:r.name === "default"}, `${r.title} — ${r.name} (${r.source})`)))).catch(() => {});
+    .map(r => el("option", {value:r.name, selected:r.name === "decision-tree"}, `${r.title} — ${r.name} (${r.source})`)))).catch(() => {});
   d.append(el("h3", {style:{marginTop:0}}, `Mode in ${p.name}`),
     el("label", {}, "Mode name (an existing mode's name edits that mode)"), name,
     el("label", {}, "Based on"), base, el("div", {style:{marginTop:"6px"}}, how),
@@ -379,7 +395,8 @@ function renderToolbar(){
     el("button", {onclick:() => { S.collapsed.clear(); saveCollapsed(); S.needFit = true; renderCanvas(); }}, "Expand all"),
     el("button", {onclick:() => { for (const n of Object.values(nodes())) if (n.id !== S.tree.root_id && kids(n.id).length) S.collapsed.add(n.id); saveCollapsed(); S.needFit = true; renderCanvas(); }}, "Collapse all"));
   const declared = Object.assign({}, ...scopes().map(nodeTypesOf));
-  const legendTypes = [...Object.keys(COLORS).map(t => [t, t]), ...Object.entries(declared).map(([t, entry]) => [t, entry.name])];
+  const used = new Set(Object.values(nodes()).map(n => n.type));
+  const legendTypes = [...Object.entries(declared).map(([t, entry]) => [t, entry.name]), ...Object.keys(BUILTIN_COLORS).filter(t => used.has(t)).map(t => [t, t])];
   tb.append(el("span", {class:"legend"}, ...legendTypes.map(([t, name]) => el("span", {style:{"--c":colorOf(t)}}, name))));
 }
 
@@ -429,7 +446,7 @@ function renderCanvas(){
     const p = pos[n.id]; if (!p) continue;
     const ot = openThreads(n), nk = shownKids(n.id).length, hit = S.q && matches(n);
     const card = el("div", {class:`card st-${n.status} rl-${roleOf(n.status, n.id)}` + (isChosen(n) ? " chosen" : "") + (S.sel === n.id ? " sel" : "") + (!matches(n) ? " dim" : "") + (hit ? " hit" : ""),
-        style:{left:p.x+"px", top:p.y+"px", "--c":colorOf(n.type)}, onclick:e => { e.stopPropagation(); select(n.id); }},
+        style:{left:p.x+"px", top:p.y+"px", "--c":colorOf(n.type)}, ...dnd(n.id), onclick:e => { e.stopPropagation(); select(n.id); }},
       el("div", {class:"top"}, typeLabel(n), modeBadge(n), n.assignee ? el("span", {class:"badge"}, "@"+n.assignee) : null,
         n.lock ? el("span", {class:"badge", title:`locked (${n.lock}): no nodes can be added, moved or deleted ${n.lock === "children" ? "directly under it" : "anywhere beneath it"}`}, "locked") : null, el("span", {class:"id"}, n.id)),
       el("div", {class:"ttl", title:n.title}, (isChosen(n) ? "★ " : "") + n.title),
@@ -469,7 +486,7 @@ function renderOutline(cv){
   const box = el("div", {id:"outline"});
   function walk(id){
     const n = nodes()[id], nk = shownKids(id), col = S.collapsed.has(id), ot = openThreads(n);
-    const li = el("li", {}, el("div", {class:`orow st-${n.status} rl-${roleOf(n.status, id)}` + (S.sel === id ? " sel" : "") + (!matches(n) ? " dim" : ""), style:{"--c":colorOf(n.type)}, onclick:() => select(id)},
+    const li = el("li", {}, el("div", {...dnd(id), class:`orow st-${n.status} rl-${roleOf(n.status, id)}` + (S.sel === id ? " sel" : "") + (!matches(n) ? " dim" : ""), style:{"--c":colorOf(n.type)}, onclick:() => select(id)},
       nk.length ? el("span", {style:{cursor:"pointer", width:"14px"}, onclick:e => { e.stopPropagation(); col ? S.collapsed.delete(id) : S.collapsed.add(id); saveCollapsed(); renderCanvas(); }}, col ? "▸" : "▾") : el("span", {style:{width:"14px"}}),
       el("span", {class:"ty"}, typeLabel(n)), modeBadge(n), el("span", {class:"tt"}, (isChosen(n) ? "★ " : "") + n.title),
       n.comments.length ? el("span", {class:"cm" + (ot ? " open" : "")}, `${n.comments.length} comment${n.comments.length > 1 ? "s" : ""}` + (ot ? ` · ${ot} open` : "")) : null,
@@ -546,8 +563,8 @@ function renderDetails(){
         el("option", {value:""}, "unlocked"), ...S.meta.locks.map(s => el("option", {value:s, selected:n.lock === s}, s)))))),
     ...fieldRows, labelRow,
     el("div", {class:"row tight edit-only", style:{marginTop:"10px", gap:"6px"}}, save, revert,
-      n.type === "option" && !isChosen(n) ? el("button", {onclick:() => {
-        const r = prompt("Why choose this option? (rationale)", f["f:rationale"] ? f["f:rationale"].value : ""); if (r !== null) mutate("POST", `/nodes/${n.id}/choose`, {rationale:r}); }}, "★ Choose option") : null,
+      (chooseOf(n.id) || {}).type === n.type && !isChosen(n) ? el("button", {onclick:() => {
+        const r = prompt("Why choose this one? (rationale)", f["f:rationale"] ? f["f:rationale"].value : ""); if (r !== null) mutate("POST", `/nodes/${n.id}/choose`, {rationale:r}); }}, "★ Choose") : null,
       waitStatus && n.status !== waitStatus ? el("button", {title:"flag for human input", onclick:() => mutate("PATCH", `/nodes/${n.id}`, {status:waitStatus})}, statusName(waitStatus)) : null,
       el("span", {style:{flex:1}}),
       n.id !== S.tree.root_id ? el("button", {class:"danger", onclick:() => { if (confirm(`Delete ${n.id} and its ${descCount(n.id)} descendant(s)?`)) { S.sel = n.parent; mutate("DELETE", `/nodes/${n.id}`); } }}, "Delete") : null),
@@ -606,13 +623,14 @@ function renderThread(n, t){
 function addChildForm(n){
   const wrap = el("div", {class:"edit-only", style:{marginTop:"8px"}});
   const C = cfgUnder(n.id), declaredTypes = nodeTypesOf(C);
-  const defaults = n.type === "question" ? ["option", "question", "note", "tree"] : ["question", "option", "decision", "task", "note", "tree"];
-  const types = [...defaults.map(t => [t, t]), ...Object.entries(declaredTypes).map(([t, entry]) => [t, entry.name])];
+  const def = defaultTypeOf(C);
+  const ordered = [def, ...Object.keys(declaredTypes).filter(t => t !== def && !declaredTypes[t].root)];
+  const types = [...ordered.map(t => [t, declaredTypes[t]?.name || t]), ["tree", "tree"]];
   const form = el("div", {style:{display:"none", border:"1px solid var(--line)", borderRadius:"8px", padding:"8px", marginTop:"6px"}});
-  let type = "question";
+  let type = types[0][0];
   const kind = el("select");
   const kindRow = el("div", {class:"row", style:{marginTop:"6px"}}, kind);
-  const kindOptions = t => t === "question" || hasOwn(declaredTypes, t) ? kindsFor(C, t) : [];
+  const kindOptions = t => kindsFor(C, t);
   const setKindType = t => {
     const kinds = kindOptions(t);
     kind.replaceChildren(el("option", {value:""}, "kind —"), ...kinds.map(k => el("option", {value:k}, k)));
@@ -653,7 +671,7 @@ function renderOverview(d){
   };
   sec("Waiting on humans", waiting("human"), "Nothing needs a human right now.");
   sec("Waiting on agents", waiting("agent"), "No unanswered human comments.");
-  const openQ = Object.values(t.nodes).filter(n => n.type === "question" && ["open", "blocked"].includes(roleOf(n.status, n.id)));
+  const openQ = Object.values(t.nodes).filter(n => n.type === defaultTypeOf(cfgAt(n.id)) && ["open", "blocked"].includes(roleOf(n.status, n.id)));
   sec("Open questions", openQ.map(n => ({n})), "All questions are resolved.");
   d.append(el("p", {class:"cm", style:{marginTop:"18px"}}, "Click a node to see details, discuss, change status or add children. Drag to pan, scroll to zoom."));
 }

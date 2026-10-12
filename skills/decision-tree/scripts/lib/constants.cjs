@@ -10,7 +10,8 @@ const SCRIPT_NAME = "dtree.cjs";
 const LIB_DIR_NAME = "lib";
 const PACKAGE_NAME = "@vineetkothari23/decision-tree";
 
-const NODE_TYPES = { goal: "g", question: "q", option: "o", decision: "d", task: "t", note: "n", tree: "s" };
+/** The only node types the code owns: a generic node and a sub-tree scope. Everything else is declared by modes. */
+const NODE_TYPES = { node: "n", tree: "s" };
 const KINDS = ["why", "what", "how", "where", "who", "when", "risk", "other"];
 const STATUSES = ["open", "exploring", "needs-input", "blocked", "decided", "chosen", "rejected", "deferred", "done"];
 const TREE_STATUSES = ["draft", "active", "decided", "implemented", "archived"];
