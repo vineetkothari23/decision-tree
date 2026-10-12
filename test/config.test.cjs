@@ -39,8 +39,10 @@ function cli(cwd, ...args) {
   return { code: r.status, out: r.stdout, err: r.stderr };
 }
 
-test("default mode is lean: body, relates-to, active/accepted/rejected, threads", () => {
-  const cfg = resolve(project(), "default").resolved_config;
+test("base mode is lean: body, relates-to, active/accepted/rejected, threads, no types or features", () => {
+  const cfg = resolve(project(), "base").resolved_config;
+  assert.deepEqual(cfg.node_types, {});
+  assert.deepEqual(cfg.features, { assignee: false, choose: null });
   assert.deepEqual(Object.keys(cfg.fields), ["body"]);
   assert.deepEqual(Object.keys(cfg.link_types), ["relates-to"]);
   assert.deepEqual(Object.entries(cfg.statuses).map(([k, v]) => [k, v.role]), [["active", "open"], ["accepted", "accepted"], ["rejected", "rejected"]]);
@@ -52,8 +54,8 @@ test("default mode is lean: body, relates-to, active/accepted/rejected, threads"
 
 test("node types inherit, replace kinds, remove with null and survive config diffs", () => {
   const store = project({
-    base: mode("base", "extends: default\nconfig:\n  node_types:\n    word:\n      name: Word\n      prefix: w\n      kinds: [common-noun, proper-noun]\n    term:\n      name: Term\n"),
-    child: mode("child", "extends: base\nconfig:\n  node_types:\n    word:\n      kinds: [proper-noun]\n    term: null\n"),
+    mybase: mode("mybase", "extends: base\nconfig:\n  node_types:\n    word:\n      name: Word\n      prefix: w\n      kinds: [common-noun, proper-noun]\n    term:\n      name: Term\n"),
+    child: mode("child", "extends: mybase\nconfig:\n  node_types:\n    word:\n      kinds: [proper-noun]\n    term: null\n"),
   });
   const cfg = resolve(store, "child").resolved_config;
   assert.deepEqual(cfg.node_types.word, { name: "Word", prefix: "w", kinds: ["proper-noun"] });
@@ -62,13 +64,13 @@ test("node types inherit, replace kinds, remove with null and survive config dif
   assert.deepEqual(cfg.node_types.word.prefix, "w");
   assert.deepEqual(cfg.node_types.term, undefined, "null removes an inherited entry");
   assert.equal(cfg.node_types.word.name, "Word");
-  assert.deepEqual(resolve(store, "base").resolved_config.node_types.term, {
+  assert.deepEqual(resolve(store, "mybase").resolved_config.node_types.term, {
     name: "Term", prefix: "t", kinds: [],
   });
 
   const tree = newTree(store, "child");
-  const word = dt.addNode(tree, { parent: "g1", type: "word", kind: "proper-noun", title: "Decision Tree", author: AGENT });
-  const data = dt.treeToTemplate(tree, "copy", { parent: { name: "default", config: resolve(store, "default").resolved_config } });
+  const word = dt.addNode(tree, { parent: tree.root_id, type: "word", kind: "proper-noun", title: "Decision Tree", author: AGENT });
+  const data = dt.treeToTemplate(tree, "copy", { parent: { name: "base", config: resolve(store, "base").resolved_config } });
   assert.deepEqual(data.config.node_types, { word: { name: "Word", prefix: "w", kinds: ["proper-noun"] } });
   assert.deepEqual([data.nodes[0].type, data.nodes[0].kind], ["word", "proper-noun"]);
   const file = path.join(store.dir, "templates", "copy.yaml");
@@ -81,16 +83,16 @@ test("node types inherit, replace kinds, remove with null and survive config dif
 
 test("node type config rejects built-ins, bad prefixes, missing names and duplicate kinds", () => {
   const invalid = (entry) => resolve(project({ bad: mode("bad", `config:\n  node_types:\n    ${entry}\n`) }), "bad");
-  err(() => invalid("note:\n      name: Note"), /node type "note" is built in/);
+  err(() => invalid("node:\n      name: Node"), /node type "node" is built in/);
   err(() => invalid("word:\n      name: Word\n      prefix: W1"), /prefix.*must match/);
   err(() => invalid("word:\n      kinds: [noun]"), /missing "name"/);
   err(() => invalid("word:\n      name: Word\n      kinds: [noun, noun]"), /"noun" is listed twice/);
 });
 
-test("feature-planning extends default with planning fields, links, pending and kinds", () => {
+test("feature-planning extends decision-tree with planning fields, links, pending and kinds", () => {
   const tpl = resolve(project(), "feature-planning");
   const cfg = tpl.resolved_config;
-  assert.deepEqual(tpl.chain, ["feature-planning", "default"]);
+  assert.deepEqual(tpl.chain, ["feature-planning", "decision-tree", "base"]);
   assert.deepEqual(Object.keys(cfg.fields), ["body", "pros", "cons", "rationale", "assignee"]);
   assert.deepEqual(Object.keys(cfg.statuses), ["active", "accepted", "rejected", "pending"]);
   assert.equal(cfg.statuses.pending.role, "waiting");
@@ -108,13 +110,13 @@ test("feature-planning extends default with planning fields, links, pending and 
 
 test("inheritance: keyed merge, null removal, list replacement, no seed inheritance", () => {
   const store = project({
-    base: mode("base", "extends: feature-planning\nconfig:\n  kinds: [why, how]\n  review:\n    required_kinds: [why]\n" +
+    mybase: mode("mybase", "extends: feature-planning\nconfig:\n  kinds: [why, how]\n  review:\n    required_kinds: [why]\n" +
       "  labels: [frontend, backend]\n  fields:\n    pros:\n      name: Upsides\n    cons: null\n    effort:\n      name: Effort\n      type: text\n" +
       "  statuses:\n    pending: null\n"),
-    leaf: mode("leaf", "extends: base\nconfig:\n  labels: [api]\n  link_types:\n    blocks: null\n"),
+    leaf: mode("leaf", "extends: mybase\nconfig:\n  labels: [api]\n  link_types:\n    blocks: null\n"),
   });
   const cfg = resolve(store, "leaf").resolved_config;
-  assert.deepEqual(resolve(store, "leaf").chain, ["leaf", "base", "feature-planning", "default"]);
+  assert.deepEqual(resolve(store, "leaf").chain, ["leaf", "mybase", "feature-planning", "decision-tree", "base"]);
   assert.deepEqual(cfg.fields.pros, { name: "Upsides", type: "list" });
   assert.ok(!("cons" in cfg.fields));
   assert.deepEqual(cfg.fields.effort, { name: "Effort", type: "text" });
@@ -132,7 +134,7 @@ test("inheritance errors: missing parent, cycles, depth, required roles, unknown
   for (let i = 0; i < 9; i++) chain[`m${i}`] = mode(`m${i}`, `extends: ${i ? `m${i - 1}` : "default"}\n`);
   err(() => resolve(project(chain), "m8"), /more than 8 modes/);
   err(() => resolve(project({ a: mode("a", "config:\n  statuses:\n    rejected: null\n") }), "a"), /roles open, accepted, rejected \(missing: rejected\)/);
-  err(() => resolve(project({ a: mode("a", "config:\n  review:\n    required_kinds: [why]\n") }), "a"), /why not in kinds/);
+  err(() => resolve(project({ a: mode("a", "extends: base\nconfig:\n  review:\n    required_kinds: [why]\n") }), "a"), /why not in kinds/);
   err(() => resolve(project({ a: mode("a", "config:\n  fields:\n    pros:\n      type: text\n") }), "a"), /built-in field "pros" must be of type list/);
   err(() => resolve(project({ a: mode("a", "config:\n  statuses:\n    x:\n      role: maybe\n") }), "a"), /"role" must be one of/);
   err(() => resolve(project({ a: mode("a", "config:\n  labels: []\nnodes:\n  - title: Q\n    status: open\n") }), "a"), /invalid status "open"; expected one of: active, accepted, rejected/);
@@ -142,26 +144,29 @@ test("inheritance errors: missing parent, cycles, depth, required roles, unknown
 const yaml = (text) => dt.parseYaml(text, "t.yaml");
 
 test("a mode extending its own name inherits from the next one down", () => {
-  const store = project({ default: mode("default", "extends: default\nconfig:\n  labels: [team]\n") });
-  const cfg = resolve(store, "default").resolved_config;
+  const store = project({ base: mode("base", "extends: base\nconfig:\n  labels: [team]\n") });
+  const cfg = resolve(store, "base").resolved_config;
   assert.deepEqual(cfg.labels, ["team"]);
   assert.deepEqual(Object.keys(cfg.statuses), ["active", "accepted", "rejected"]);
   const fp = resolve(store, "feature-planning").resolved_config;
-  assert.deepEqual(fp.labels, ["team"], "built-in modes inherit the project's default");
+  assert.deepEqual(fp.labels, ["team"], "built-in modes inherit the project's base");
 });
 
 test("configured trees enforce their own vocabulary; legacy trees keep the old one", () => {
   const store = project();
-  const tree = newTree(store, "default");
-  dt.addNode(tree, { parent: "g1", title: "Q", author: AGENT });
-  assert.equal(tree.nodes.q2.status, "active");
-  err(() => dt.addNode(tree, { parent: "g1", title: "Q", status: "open", author: AGENT }), /invalid status "open"/);
-  err(() => dt.addNode(tree, { parent: "g1", title: "Q", kind: "why", author: AGENT }), /defines no question kinds/);
-  err(() => dt.addNode(tree, { parent: "g1", type: "option", title: "O", pros: ["x"], author: AGENT }), /field "pros" is not part/);
-  err(() => dt.addNode(tree, { parent: "g1", title: "Q", labels: ["x"], author: AGENT }), /defines no labels/);
-  err(() => dt.updateNode(tree, "q2", { assignee: "me" }, AGENT), /field "assignee" is not editable/);
-  assert.deepEqual(dt.addLink(tree, "q2", "g1", null, AGENT), { target: "g1", type: "relates-to" });
-  err(() => dt.addLink(tree, "q2", "g1", "blocks", AGENT), /invalid link type/);
+  const tree = newTree(store, "base");
+  assert.equal(tree.nodes.n1.type, "node");
+  dt.addNode(tree, { parent: "n1", title: "Q", author: AGENT });
+  assert.equal(tree.nodes.n2.status, "active");
+  err(() => dt.addNode(tree, { parent: "n1", title: "Q", status: "open", author: AGENT }), /invalid status "open"/);
+  err(() => dt.addNode(tree, { parent: "n1", title: "Q", kind: "why", author: AGENT }), /node type "node" defines no kinds/);
+  err(() => dt.addNode(tree, { parent: "n1", type: "option", title: "O", author: AGENT }), /invalid node type "option"/);
+  err(() => dt.addNode(tree, { parent: "n1", title: "Q", pros: ["x"], author: AGENT }), /field "pros" is not part/);
+  err(() => dt.addNode(tree, { parent: "n1", title: "Q", labels: ["x"], author: AGENT }), /defines no labels/);
+  err(() => dt.updateNode(tree, "n2", { assignee: "me" }, AGENT), /field "assignee" is not editable/);
+  err(() => dt.chooseOption(tree, "n2", "", AGENT), /no choose feature/);
+  assert.deepEqual(dt.addLink(tree, "n2", "n1", null, AGENT), { target: "n1", type: "relates-to" });
+  err(() => dt.addLink(tree, "n2", "n1", "blocks", AGENT), /invalid link type/);
 
   const legacy = store.createTree("legacy", "L", "", AGENT);
   assert.equal(legacy.config, undefined);
@@ -184,8 +189,8 @@ test("declared node types add, validate kinds, update and leave built-in kinds u
   err(() => dt.addNode(tree, { parent: "g1", type: "word", kind: "common-verb", title: "Bad", author: AGENT }), /invalid kind "common-verb"/);
   err(() => dt.addNode(tree, { parent: "g1", type: "missing", title: "Bad", author: AGENT }), /invalid node type.*goal.*word/);
 
-  const note = dt.addNode(tree, { parent: "g1", type: "note", kind: "why", title: "Note", author: AGENT });
-  assert.equal(note.kind, null, "addNode continues dropping kinds from built-in non-questions");
+  err(() => dt.addNode(tree, { parent: "g1", type: "note", kind: "why", title: "Note", author: AGENT }), /node type "note" defines no kinds/);
+  const note = dt.addNode(tree, { parent: "g1", type: "note", title: "Note", author: AGENT });
   err(() => dt.updateNode(tree, note.id, { type: "missing" }, AGENT), /invalid node type.*goal.*word/);
   dt.updateNode(tree, note.id, { type: "word", kind: "common-noun" }, AGENT);
   assert.equal(note.type, "word");
@@ -194,13 +199,15 @@ test("declared node types add, validate kinds, update and leave built-in kinds u
 });
 
 test("stored mode configs without node_types still add and update built-in nodes", () => {
-  assert.deepEqual(dt.LEGACY_CONFIG.node_types, {});
+  assert.deepEqual(Object.keys(dt.LEGACY_CONFIG.node_types), ["goal", "question", "option", "decision", "task", "note"]);
   const tree = newTree(project(), "feature-planning");
   delete tree.config.node_types;
+  delete tree.config.features;
+  dt.upgradeTree(tree);
+  assert.deepEqual(tree.config.features, { assignee: true, choose: { type: "option" } });
   const question = dt.addNode(tree, { parent: "g1", kind: "how", title: "Question", author: AGENT });
-  const note = dt.addNode(tree, { parent: "g1", type: "note", kind: "why", title: "Note", author: AGENT });
+  const note = dt.addNode(tree, { parent: "g1", type: "note", title: "Note", author: AGENT });
   assert.equal(question.kind, "how");
-  assert.equal(note.kind, null);
   dt.updateNode(tree, question.id, { kind: "risk" }, AGENT);
   dt.updateNode(tree, note.id, { type: "task", status: "active" }, AGENT);
   assert.equal(question.kind, "risk");
@@ -233,8 +240,8 @@ test("custom statuses drive choose, review, inbox and summary through roles", ()
 });
 
 test("choose without a rationale field records the reason as a comment; default review skips pros/kinds", () => {
-  const store = project();
-  const tree = newTree(store, "default");
+  const store = project({ lean: mode("lean", "extends: decision-tree\nconfig:\n  fields:\n    pros: null\n    cons: null\n    rationale: null\n") });
+  const tree = newTree(store, "lean");
   const q = dt.addNode(tree, { parent: "g1", title: "Q", author: AGENT });
   const a = dt.addNode(tree, { parent: q.id, type: "option", title: "A", author: AGENT });
   dt.addNode(tree, { parent: q.id, type: "option", title: "B", author: AGENT });
@@ -330,7 +337,7 @@ test("export round-trips config, labels, locks and custom fields as a diff again
   assert.match(text, /extends: m\n/);
   assert.deepEqual(resolve(store, "copy").resolved_config, tree.config);
   const again = dt.saveTreeAsMode(store, tree, "m", { force: true });
-  assert.match(fs.readFileSync(again.path, "utf8"), /extends: default\n/, "saving over its own (only) source falls back to default");
+  assert.match(fs.readFileSync(again.path, "utf8"), /extends: decision-tree\n/, "saving over its own (only) source falls back to decision-tree");
   assert.deepEqual(resolve(store, "m").resolved_config, tree.config);
 });
 
@@ -423,7 +430,7 @@ test("HTTP API: configured nodes, locks, drafts and meta", async (t) => {
   assert.match(r.data.error, /invalid status/);
 
   r = await call("GET", "/api/projects/0/templates/feature-planning");
-  assert.deepEqual(r.data.chain, ["feature-planning", "default"]);
+  assert.deepEqual(r.data.chain, ["feature-planning", "decision-tree", "base"]);
   r = await call("POST", "/api/projects/0/drafts", { name: "mine", extends: "default" });
   assert.equal(r.status, 200, JSON.stringify(r.data));
   const D = "/api/projects/0/drafts/mine";

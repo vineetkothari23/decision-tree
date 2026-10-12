@@ -6,7 +6,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { TEMPLATES_DIR, TEMPLATE_EXTS, TEMPLATE_NAME_RE, TEMPLATE_PATH_RE } = require("../constants.cjs");
 const { builtinTemplatesDir, userTemplatesDir } = require("../paths.cjs");
-const { DTError, isFile, realOrResolved } = require("../util.cjs");
+const { DTError, isFile, realOrResolved, hasOwn } = require("../util.cjs");
+const { MODE_ALIASES } = require("../config/compat.cjs");
 const { parseYaml } = require("../yaml.cjs");
 const { validateTemplate, validateTemplateName, countTemplateNodes } = require("./schema.cjs");
 
@@ -67,6 +68,7 @@ function findTemplate(store, arg, { allowPath = true } = {}) {
     const [file] = templateFiles(dir, arg);
     if (file) return loadTemplate(file, source);
   }
+  if (hasOwn(MODE_ALIASES, arg)) return findTemplate(store, MODE_ALIASES[arg], { allowPath });
   throw new DTError(`template ${JSON.stringify(arg)} not found; run \`dtree templates\` to list them ` +
     `(searched ${dirs.map((d) => d.dir).join(", ")})`);
 }
@@ -95,7 +97,7 @@ function listTemplates(store) {
         const tpl = loadTemplate(file, source);
         row.title = tpl.title;
         row.description = tpl.description;
-        row.extends = tpl.extends ?? (tpl.config ? "default" : null);
+        row.extends = tpl.extends ?? (tpl.config ? (name === "base" ? null : "decision-tree") : null);
         row.nodes = countTemplateNodes(tpl.nodes);
       } catch (e) {
         if (!(e instanceof DTError)) throw e;

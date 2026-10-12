@@ -1,27 +1,35 @@
 "use strict";
 
 /**
- * Mode inheritance. A mode's parent is `extends:` (default: "default"), looked up like any template; a mode that
+ * Mode inheritance. A mode's parent is `extends:` (default: "base"; old name "default" means "decision-tree"), looked up like any template; a mode that
  * extends its own name inherits from the next one down the lookup order. Configs merge root-first (config/sections),
  * the result is finalized and the mode's own seed nodes are checked against it. Seed nodes are never inherited.
  */
 
 const path = require("node:path");
-const { DTError, realOrResolved } = require("../util.cjs");
+const { DTError, realOrResolved, hasOwn } = require("../util.cjs");
 const { LEGACY_CONFIG } = require("../config/legacy.cjs");
 const { mergeConfig, finalizeConfig } = require("../config/sections.cjs");
 const { checkNodes, isConfigured, templateFail } = require("./schema.cjs");
 const { findTemplate, loadTemplate, templateDirs, templateFiles } = require("./lookup.cjs");
 
-const DEFAULT_MODE = "default";
+const { MODE_ALIASES } = require("../config/compat.cjs");
+
+/** The mode a configured template without `extends:` inherits from. */
+const DEFAULT_MODE = "base";
+/** The mode `dtree new` and the viewer use when none is given. */
+const DEFAULT_TREE_MODE = "decision-tree";
 const MAX_DEPTH = 8;
 
 const labelOf = (tpl) => `${JSON.stringify(tpl.name)}${tpl.path ? ` (${tpl.path})` : ""}`;
 const keyOf = (tpl) => (tpl.path ? realOrResolved(tpl.path) : `draft:${tpl.name}`);
 
+/** A configured mode without `extends:` inherits the default tree mode; `base` itself is the root. */
+const implicitParent = (name) => (name === DEFAULT_MODE ? DEFAULT_MODE : DEFAULT_TREE_MODE);
+
 /** The template `tpl` inherits from, or null for the base mode (a `default` that extends nothing below it). */
 function parentOf(store, tpl) {
-  const name = tpl.extends || DEFAULT_MODE;
+  const name = tpl.extends || implicitParent(tpl.name);
   const dirs = templateDirs(store);
   const own = tpl.path ? realOrResolved(tpl.path) : null;
   const at = tpl.path ? dirs.findIndex((d) => realOrResolved(d.dir) === realOrResolved(path.dirname(tpl.path))) : -1;
@@ -30,6 +38,7 @@ function parentOf(store, tpl) {
     const [file] = templateFiles(dirs[i].dir, name);
     if (file && realOrResolved(file) !== own) return loadTemplate(file, dirs[i].source);
   }
+  if (hasOwn(MODE_ALIASES, name)) return parentOf(store, { ...tpl, extends: MODE_ALIASES[name] });
   if (name === tpl.name && !tpl.extends) return null;
   const where = name === tpl.name ? `no lower-precedence mode named ${JSON.stringify(name)} exists` : "not found";
   throw new DTError(`template ${labelOf(tpl)}: extends: ${JSON.stringify(name)} ${where}; run \`dtree modes\` to list them`);
@@ -80,7 +89,7 @@ function inheritedConfig(store, name, parentName, dir) {
 function treeParent(store, tree, name, dir) {
   if (!tree.config) return null;
   const wanted = tree.draft ? tree.draft.extends : tree.template;
-  for (const parentName of [wanted, DEFAULT_MODE]) {
+  for (const parentName of [wanted, DEFAULT_TREE_MODE]) {
     if (!parentName) continue;
     try {
       const config = inheritedConfig(store, name, parentName, dir);
@@ -89,7 +98,7 @@ function treeParent(store, tree, name, dir) {
       if (!(e instanceof DTError)) throw e;
     }
   }
-  return { name: DEFAULT_MODE, config: {} };
+  return { name: DEFAULT_TREE_MODE, config: {} };
 }
 
-module.exports = { DEFAULT_MODE, MAX_DEPTH, withConfig, resolveTemplate, inheritedConfig, treeParent };
+module.exports = { DEFAULT_MODE, DEFAULT_TREE_MODE, implicitParent, MAX_DEPTH, withConfig, resolveTemplate, inheritedConfig, treeParent };

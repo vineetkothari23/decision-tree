@@ -15,7 +15,8 @@ Templates are an authoring format only: the created tree is stored as normal JSO
 
 | Name | Use it for | Seeds |
 |---|---|---|
-| `default` | The base every mode extends | nothing (config only: body, `relates-to`, active/accepted/rejected) |
+| `base` | The root of every mode: generic `node`s only | nothing (config only: body, `relates-to`, active/accepted/rejected) |
+| `decision-tree` | The default for `dtree new`: goal, question, option, decision, task, note; choose and assignee features; review rules | nothing (config only) |
 | `feature-planning` | Planning a new feature | why, who, scope, success metrics (needs human sign-off), approach, data/API changes, placement, rollout (feature flag vs. big-bang options), testing, security/privacy risk |
 | `planning` | Planning a project made of several features | a Features question holding one `feature-planning` sub-tree |
 | `pr-review` | Reviewing a pull request | intent, scope, approach, edge cases/error handling, placement, risk, tests, docs, and a `Review verdict` decision with Approve / Request changes / Comment only options |
@@ -60,7 +61,13 @@ keys are rejected with a file:line error.
 
 A template with `extends:` or `config:` is a **mode**: besides seed nodes it sets the tree's
 fields, statuses, link types, labels, kinds, review checks, comment threading and declared node
-types. `node_types` is keyed by type id; each entry requires a display `name` and may set a
+types. Per type: `root: true` marks the type of a new tree's root, `default: true` the type `add` uses
+without `-t` (it also uses the mode-wide `kinds`); `fields`/`statuses` limit it to those mode
+fields/statuses; `color` sets its viewer color (otherwise one is derived from its id). `rules` are data,
+not code: `{when?, require: any|all|none|"at-least N"|"at-most N", of: self|{children: 1|"*", type?},
+where?, message?, level: warn|block}`, where `when`/`where` match `status`, `role`, `type`, `kind`,
+`filled`, `empty`, `linked` and `not`. `warn` rules show in `dtree review`; `block` rules also refuse a
+status change that breaks them. See `decision-tree.yaml` for examples. types. `node_types` is keyed by type id; each entry requires a display `name` and may set a
 `prefix`, `description` and its own allowed `kinds`. Entries inherit and merge like other keyed
 sections (`word: null` removes one); declarations are available only in that mode's scope.
 
@@ -68,7 +75,7 @@ sections (`word: null` removes one); declarations are available only in that mod
 template: 1
 name: team-planning
 title: Team planning
-extends: feature-planning      # optional; a mode with `config:` and no `extends:` extends `default`
+extends: feature-planning      # optional; a mode with `config:` and no `extends:` extends `decision-tree` (`default` is an alias)
 config:                        # only what differs from the parent
   fields:                      # keyed: <id>: {name, type}; type is text | text_body | list
     effort:
@@ -82,7 +89,8 @@ config:                        # only what differs from the parent
   link_types:                  # keyed: <id>: {name}
     implements:
       name: Implements
-  node_types:                  # keyed: <id>: {name, prefix?, description?, kinds?}
+  node_types:                  # keyed: <id>: {name, prefix?, description?, color?, root?, default?, kinds?, fields?, statuses?, rules?}
+  features:                    # opt-in: assignee: true; choose: {type, chosen?, siblings?, parent?}
     word:
       name: Word
       prefix: w
@@ -102,7 +110,7 @@ nodes:                         # may be empty in a mode that has config; seed no
     lock: children             # children | subtree: blocks add/move/delete below it
 ```
 
-Built-in `default` is lean: field `body`, link type `relates-to`, statuses `active` (open),
+Built-in `base` is lean (the code only owns a generic `node` and the sub-tree `tree`; every other type is declared by a mode): field `body`, link type `relates-to`, statuses `active` (open),
 `accepted` and `rejected`, threaded comments, no kinds or labels. `feature-planning` and
 `pr-review` extend it (adding pros/cons/rationale, more link types, kinds and, for planning,
 a `pending` status). Every status has a role: `open` (the first one is the default for new
@@ -110,7 +118,7 @@ nodes), `waiting` (shows in the human inbox), `blocked`, `accepted` (choosing an
 last accepted status on it and the first on its parent), `rejected` (its siblings), `closed`.
 Each mode needs at least one open, accepted and rejected status. Lookup follows the template
 search order; a mode that extends its own name inherits from the next location down (so a
-project `default.yaml` with `extends: default` customizes the built-in for every mode). At most
+project `base.yaml` with `extends: base` customizes the built-in for every mode). At most
 8 modes deep; cycles are rejected. A new tree stores its mode name and the fully resolved config,
 so editing or removing the mode later never changes existing trees. Trees created without a mode,
 or before modes had config, keep the original fixed vocabulary.

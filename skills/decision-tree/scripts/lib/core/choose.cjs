@@ -1,6 +1,9 @@
 "use strict";
 
-/** Choosing an option: it gets its scope's accepted status, its siblings the rejected one, its question is decided. */
+/**
+ * The opt-in `choose` feature (`features.choose: {type, chosen?, siblings?, parent?}`): the chosen node gets the
+ * `chosen` status, its same-type siblings `siblings`, its parent `parent`. Omitted statuses come from status roles.
+ */
 
 const { DTError, hasOwn } = require("../util.cjs");
 const { configAt } = require("../config/scope.cjs");
@@ -11,24 +14,28 @@ const { addComment } = require("./comments.cjs");
 function chooseOption(tree, oid, rationale, author, rejectSiblings = true) {
   const cfg = configAt(tree, oid);
   const option = getNode(tree, oid);
-  if (option.type !== "option") throw new DTError(`${oid} is a ${option.type}, not an option`);
+  const feature = cfg.features && cfg.features.choose;
+  if (!feature) throw new DTError("this tree's mode has no choose feature (features.choose)");
+  if (option.type !== feature.type) throw new DTError(`${oid} is a ${option.type}, not a${/^[aeiou]/.test(feature.type) ? "n" : ""} ${feature.type}`);
+  const chosen = feature.chosen || chosenStatus(cfg);
   const why = rationale || "";
-  if (hasOwn(cfg.fields, "rationale")) updateNode(tree, oid, { status: chosenStatus(cfg), rationale: why || option.rationale || "" }, author);
+  if (hasOwn(cfg.fields, "rationale")) updateNode(tree, oid, { status: chosen, rationale: why || option.rationale || "" }, author);
   else {
-    updateNode(tree, oid, { status: chosenStatus(cfg) }, author);
+    updateNode(tree, oid, { status: chosen }, author);
     if (why.trim()) addComment(tree, oid, `Chosen: ${why}`, author);
   }
   const parent = option.parent ? tree.nodes[option.parent] : undefined;
   if (rejectSiblings && parent) {
     for (const sib of children(tree, parent.id)) {
-      if (sib.type === "option" && sib.id !== oid && !hasRole(cfg, sib.status, "rejected", "closed")) {
-        updateNode(tree, sib.id, { status: rejectedStatus(cfg) }, author);
+      if (sib.type === feature.type && sib.id !== oid && !hasRole(cfg, sib.status, "rejected", "closed")) {
+        updateNode(tree, sib.id, { status: feature.siblings || rejectedStatus(cfg) }, author);
       }
     }
   }
   if (parent) {
     parent.chosen = oid;
-    updateNode(tree, parent.id, { status: decidedStatus(configAt(tree, parent.id)) }, author);
+    const pcfg = configAt(tree, parent.id);
+    updateNode(tree, parent.id, { status: (pcfg === cfg && feature.parent) || decidedStatus(pcfg) }, author);
   }
   log(tree, author, "choose", oid, why);
   return option;

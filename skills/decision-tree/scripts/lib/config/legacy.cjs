@@ -3,6 +3,7 @@
 /** The config of trees created before modes existed: every built-in field, status and link type. */
 
 const { KINDS, STATUSES, LINK_TYPES } = require("../constants.cjs");
+const { decisionTreeTypes, DECISION_TREE_FEATURES } = require("./compat.cjs");
 
 const LEGACY_ROLES = {
   open: "open", exploring: "open", "needs-input": "waiting", blocked: "blocked",
@@ -28,7 +29,8 @@ const LEGACY_CONFIG = deepFreeze({
   review: { required_kinds: ["why", "what", "how", "where"] },
   kinds: [...KINDS],
   labels: [],
-  node_types: {},
+  node_types: decisionTreeTypes(),
+  features: DECISION_TREE_FEATURES,
 });
 
 /** A tree's config: its own resolved mode config, or the legacy one for trees without `config`. */

@@ -13,6 +13,9 @@ const { applyTemplate } = require("../templates/apply.cjs");
 const { EXAMPLE_TEMPLATE } = require("../templates/example.cjs");
 const { summarize } = require("../review/summary.cjs");
 const { vendorTool } = require("./vendor.cjs");
+const { upgradeTree } = require("../config/compat.cjs");
+const { treeConfig } = require("../config/legacy.cjs");
+const { rootType } = require("../core/policy/vocab.cjs");
 
 /** One application's .decisions directory. */
 class Store {
@@ -72,7 +75,7 @@ class Store {
   load(slug) {
     const p = this.treePath(slug);
     if (!fs.existsSync(p)) throw new DTError(`tree ${JSON.stringify(slug)} not found in ${this.dir}`);
-    return JSON.parse(fs.readFileSync(p, "utf8"));
+    return upgradeTree(JSON.parse(fs.readFileSync(p, "utf8")));
   }
 
   withLock(fn) {
@@ -151,7 +154,7 @@ class Store {
       };
       if (template) tree.template = template.name;
       if (template && template.resolved_config) tree.config = JSON.parse(JSON.stringify(template.resolved_config));
-      const root = addNode(tree, { parent: null, type: "goal", title, body: description, author });
+      const root = addNode(tree, { parent: null, type: rootType(treeConfig(tree)), title, body: description, author });
       tree.root_id = root.id;
       if (template) applyTemplate(tree, template, author, this);
       this.write(tree);

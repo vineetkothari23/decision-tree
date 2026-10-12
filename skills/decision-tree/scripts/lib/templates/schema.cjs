@@ -6,12 +6,11 @@
  * inherited one once templates/resolve has resolved it.
  */
 
-const { NODE_TYPES, TREE_STATUSES, TEMPLATE_VERSION, TEMPLATE_NAME_RE, TEMPLATE_KEYS, TEMPLATE_NODE_KEYS } = require("../constants.cjs");
+const { TREE_STATUSES, TEMPLATE_VERSION, TEMPLATE_NAME_RE, TEMPLATE_KEYS, TEMPLATE_NODE_KEYS } = require("../constants.cjs");
 const { DTError, isPlainObject, hasOwn } = require("../util.cjs");
 const { LEGACY_CONFIG } = require("../config/legacy.cjs");
-const { initialStatus } = require("../config/roles.cjs");
 const { CONFIG_ID_RE, parseConfig, BUILTIN_FIELDS } = require("../config/sections.cjs");
-const { kindsFor, nodeTypesOf } = require("../core/policy/vocab.cjs");
+const { kindsFor, isKnownType, defaultType, rootType, statusesFor, fieldsFor, initialStatusFor } = require("../core/policy/vocab.cjs");
 const { LOCKS } = require("../core/policy/locks.cjs");
 
 const templateFail = (label) => (where, msg) => {
@@ -54,7 +53,6 @@ function validateTemplate(data, { label, name = null }) {
     fail("extends", `must be the name of another mode, got ${JSON.stringify(parent)}`);
   }
   const config = hasOwn(data, "config") ? parseConfig(data.config, fail) : null;
-  const configured = isConfigured({ extends: parent, config });
   const list = (v, where) => {
     if (v === undefined || v === null) return [];
     if (!Array.isArray(v)) fail(where, "must be a list");
@@ -76,13 +74,9 @@ function validateTemplate(data, { label, name = null }) {
     }
     const nodeTitle = text(raw.title, where, "title").trim();
     if (!nodeTitle) fail(where, 'missing required "title"');
-    const type = raw.type ?? "question";
-    if (type === "goal") fail(where, 'type "goal" is reserved for the root; use question, option, decision, task, note or tree');
-    if (!Object.keys(NODE_TYPES).includes(type) && !CONFIG_ID_RE.test(type)) {
-      fail(where, `invalid type ${JSON.stringify(type)}; expected a built-in type or a lowercase id`);
-    }
-    if (!Object.keys(NODE_TYPES).includes(type) && !configured) {
-      fail(where, `custom node type ${JSON.stringify(type)} requires a configured mode`);
+    const type = raw.type ?? null;
+    if (type !== null && (typeof type !== "string" || !CONFIG_ID_RE.test(type))) {
+      fail(where, `invalid type ${JSON.stringify(type)}; expected a node type id`);
     }
     const mode = raw.mode ?? null;
     if (type === "tree" && (typeof mode !== "string" || !TEMPLATE_NAME_RE.test(mode))) {
@@ -90,14 +84,6 @@ function validateTemplate(data, { label, name = null }) {
     }
     if (type !== "tree" && mode !== null) fail(where, `"mode" is only allowed on tree nodes (this node is a ${type})`);
     const kind = id(raw.kind, where, "kind");
-    if (kind !== null && type !== "question" && hasOwn(NODE_TYPES, type)) {
-      fail(where, `"kind" is only allowed on questions or declared node types (this node is a ${type})`);
-    }
-    for (const key of ["pros", "cons"]) {
-      if (raw[key] !== undefined && raw[key] !== null && type !== "option") {
-        fail(where, `${JSON.stringify(key)} is only allowed on options (this node is a ${type})`);
-      }
-    }
     const out = {
       title: nodeTitle,
       type,
@@ -160,15 +146,16 @@ function checkNodes(nodes, cfg, fail) {
   };
   const walk = (list, prefix) => list.forEach((n, k) => {
     const where = `${prefix}[${k}]`;
-    if (!hasOwn(NODE_TYPES, n.type) && !hasOwn(nodeTypesOf(cfg), n.type)) {
-      fail(where, `node type ${JSON.stringify(n.type)} is not declared in this mode`);
-    }
+    n.type = n.type ?? defaultType(cfg);
+    if (!isKnownType(cfg, n.type)) fail(where, `node type ${JSON.stringify(n.type)} is not declared in this mode`);
+    if (n.type === rootType(cfg) && n.type !== "node") fail(where, `type ${JSON.stringify(n.type)} is reserved for the root`);
     if (n.kind !== null) known(n.kind, kindsFor(cfg, n.type), "kind", where);
-    n.status = n.status ?? initialStatus(cfg);
-    known(n.status, Object.keys(cfg.statuses), "status", where);
+    n.status = n.status ?? initialStatusFor(cfg, n.type);
+    known(n.status, statusesFor(cfg, n.type), "status", where);
     for (const l of n.labels || []) known(l, cfg.labels, "label", where);
     for (const f of ["body", "assignee", "pros", "cons", "rationale"]) {
       if (n[f] && n[f].length && !hasOwn(cfg.fields, f)) fail(where, `field ${JSON.stringify(f)} is not part of this mode`);
+      if (n[f] && n[f].length && f !== "body" && !fieldsFor(cfg, n.type).includes(f)) fail(where, `field ${JSON.stringify(f)} is not allowed on ${n.type}`);
     }
     for (const [f, v] of Object.entries(n.fields || {})) {
       if (!hasOwn(cfg.fields, f)) fail(`${where}.fields`, `field ${JSON.stringify(f)} is not part of this mode`);

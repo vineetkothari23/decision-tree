@@ -4,7 +4,7 @@ title: Plan a project
 description: |-
   Break a project into features. Each feature is a feature-planning sub-tree with its own
   why/what/how/where questions; add one per feature under "Features".
-extends: default
+extends: decision-tree
 config:
   link_types:
     child:

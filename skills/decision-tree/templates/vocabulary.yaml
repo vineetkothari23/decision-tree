@@ -1,10 +1,13 @@
 template: 1
 name: vocabulary
 title: Repo vocabulary
-extends: default
+extends: base
 description: "A shared vocabulary of this repo's words, so humans and agents use the same terms. Read it before planning. Add only words specific to this repo, i.e. named in its code, docs or UI or given a narrower meaning here. Skip general programming or English words. Test: would a new contributor misread it, or fail to find its meaning outside this repo?"
 config:
   node_types:
+    group:
+      name: Group
+      prefix: gr
     word:
       name: Word
       prefix: w
@@ -31,12 +34,12 @@ config:
       name: Type of
 nodes:
   - title: Functional terms
-    type: note
+    type: group
     body: |
       Product/domain words users see: features, UI, concepts.
       dtree add vocabulary -p <this note> -t word -k <kind> --title "<word>" --field definition="..."
   - title: Technical terms
-    type: note
+    type: group
     body: |
       Code-level words: modules, data structures, commands.
       dtree add vocabulary -p <this note> -t word -k <kind> --title "<word>" --field definition="..."

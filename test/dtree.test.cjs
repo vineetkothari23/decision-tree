@@ -217,7 +217,7 @@ test("CLI end-to-end", () => {
   assert.equal(JSON.parse(cli(dir, "list", "--json").out)[0].id, "add-sso-login");
   const sub = path.join(dir, "src", "deep");
   fs.mkdirSync(sub, { recursive: true });
-  assert.match(cli(sub, "show", "add-sso-login").out, /\[o4\] option OIDC {2}\(chosen\)/);
+  assert.match(cli(sub, "show", "add-sso-login").out, /\[o4\] option OIDC {2}\(accepted\)/);
   assert.match(cli(dir, "render", "-o", "snap.html").out, /wrote snap.html/);
   assert.ok(fs.readFileSync(path.join(dir, "snap.html"), "utf8").includes("DTREE_STATIC"));
   const vendored = spawnSync(process.execPath, [path.join(dir, ".decisions", "_tool", "dtree.cjs"), "list"], { cwd: os.tmpdir(), encoding: "utf8" });
@@ -476,11 +476,10 @@ test("template validation errors name the template and node path", () => {
   err({ ...base, nodes: [{ title: " " }] }, /nodes\[0\]: missing required "title"/);
   err({ ...base, nodes: [{}] }, /nodes\[0\]: must be a mapping|nodes\[0\]: missing required "title"/);
   err({ ...base, nodes: [{ title: "x", type: "goal" }] }, /nodes\[0\]: type "goal" is reserved/);
-  err({ ...base, nodes: [{ title: "x", type: "epic" }] }, /nodes\[0\]: custom node type "epic" requires a configured mode/);
+  err({ ...base, nodes: [{ title: "x", type: "epic" }] }, /nodes\[0\]: node type "epic" is not declared in this mode/);
   err({ ...base, nodes: [{ title: "x", kind: "huh" }] }, /nodes\[0\]: invalid kind "huh"/);
-  err({ ...base, nodes: [{ title: "x", type: "task", kind: "why" }] }, /nodes\[0\]: "kind" is only allowed on questions/);
+  err({ ...base, nodes: [{ title: "x", type: "task", kind: "why" }] }, /nodes\[0\]: invalid kind "why": this mode defines no kinds/);
   err({ ...base, nodes: [{ title: "x", status: "maybe" }] }, /nodes\[0\]: invalid status "maybe"/);
-  err({ ...base, nodes: [{ title: "x", pros: ["p"] }] }, /nodes\[0\]: "pros" is only allowed on options/);
   err({ ...base, nodes: [{ title: "x", children: [{ title: "y", colour: "red" }] }] }, /nodes\[0\]\.children\[0\]: unknown key "colour"/);
   err({ ...base, nodes: [{ title: "x", children: "y" }] }, /nodes\[0\]\.children: must be a list/);
   err({ ...base, nodes: [{ title: { a: 1 } }] }, /nodes\[0\]: "title" must be a string/);
@@ -587,14 +586,14 @@ test("built-in templates shipped with the skill parse and validate", () => {
     assert.equal(tree.template, tpl.name);
     if (loaded.name === "vocabulary") {
       assert.deepEqual(tree.config.node_types.word.kinds, ["common-noun", "proper-noun", "slang", "short-form", "abbreviation", "phrase", "entity"]);
-      assert.deepEqual(Object.values(tree.nodes).filter((n) => n.parent === "g1").map((n) => n.title), ["Functional terms", "Technical terms"]);
+      assert.deepEqual(Object.values(tree.nodes).filter((n) => n.parent === tree.root_id).map((n) => n.title), ["Functional terms", "Technical terms"]);
     }
   }
 });
 
 test("templates accept declared node types and reject custom types without a declaration", () => {
   assert.throws(() => dt.validateTemplate(yaml(
-    "template: 1\nname: legacy-word\ntitle: Legacy word\nnodes:\n  - title: Decision Tree\n    type: word\n"), { label: '"legacy-word"' }), /custom node type "word" requires a configured mode/);
+    "template: 1\nname: legacy-word\ntitle: Legacy word\nnodes:\n  - title: Decision Tree\n    type: word\n"), { label: '"legacy-word"' }), /node type "word" is not declared in this mode/);
 
   const dir = tmpdir(), env = { XDG_CONFIG_HOME: tmpdir() };
   const source = path.join(dir, "undeclared.yaml");
@@ -610,7 +609,7 @@ test("CLI: vocabulary mode adds words, kinds, fields, links and reviews without 
   let r = cliEnv(dir, env, SCRIPT, "new", "Vocabulary", "--id", "vocabulary", "--mode", "vocabulary");
   assert.equal(r.code, 0, r.err);
   let tree = JSON.parse(cliEnv(dir, env, SCRIPT, "show", "vocabulary", "--json").out);
-  const groups = Object.values(tree.nodes).filter((n) => n.type === "note");
+  const groups = Object.values(tree.nodes).filter((n) => n.type === "group");
   assert.equal(groups.length, 2);
 
   r = cliEnv(dir, env, SCRIPT, "add", "vocabulary", "-p", groups[0].id, "-t", "word", "-k", "proper-noun",
@@ -627,7 +626,7 @@ test("CLI: vocabulary mode adds words, kinds, fields, links and reviews without 
   r = cliEnv(dir, env, SCRIPT, "link", "vocabulary", words[0].id, words[1].id, "--type", "aka");
   assert.equal(r.code, 0, r.err);
   assert.match(cliEnv(dir, env, SCRIPT, "show", "vocabulary").out, /aka/);
-  assert.match(cliEnv(dir, env, SCRIPT, "config", "vocabulary").out, /node types: word \(w; kinds: common-noun, proper-noun, slang, short-form, abbreviation, phrase, entity\)/);
+  assert.match(cliEnv(dir, env, SCRIPT, "config", "vocabulary").out, /node types: group \(gr; kinds: -\), word \(w; kinds: common-noun, proper-noun, slang, short-form, abbreviation, phrase, entity\)/);
   assert.match(cliEnv(dir, env, SCRIPT, "review", "vocabulary").out, /no gaps found/);
 });
 

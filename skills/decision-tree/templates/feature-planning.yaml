@@ -9,7 +9,7 @@ description: |
   give every question 2-4 options with pros and cons, choose with a rationale,
   and mark product calls pending instead of guessing.
 tree_status: draft
-extends: default
+extends: decision-tree
 config:
   fields:
     pros:
