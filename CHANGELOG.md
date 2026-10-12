@@ -1,5 +1,9 @@
 # Release notes
 
+## 0.4.1
+
+- New `plan` mode: plan a project as a set of feature sub-trees.
+
 ## 0.4.0
 
 - Modular templates: reuse other template trees as sub-trees in larger modes.

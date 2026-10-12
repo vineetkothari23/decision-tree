@@ -1,0 +1,578 @@
+{
+  "schema_version": 1,
+  "id": "plan",
+  "title": "Plan a project",
+  "description": "Break a project into features. Each feature is a feature-planning sub-tree with its own\nwhy/what/how/where questions; add one per feature under \"Features\".",
+  "status": "draft",
+  "created_at": "2026-10-11T22:53:34Z",
+  "updated_at": "2026-10-11T23:18:50Z",
+  "created_by": {
+    "name": "Vineet",
+    "type": "human"
+  },
+  "revision": 13,
+  "next_id": 15,
+  "root_id": "g1",
+  "nodes": {
+    "g1": {
+      "id": "g1",
+      "type": "goal",
+      "kind": null,
+      "title": "Plan a project",
+      "body": "Break a project into features. Each feature is a feature-planning sub-tree with its own\nwhy/what/how/where questions; add one per feature under \"Features\".",
+      "status": "active",
+      "parent": null,
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "created_at": "2026-10-11T22:53:34Z",
+      "updated_at": "2026-10-11T22:53:34Z"
+    },
+    "q4": {
+      "id": "q4",
+      "type": "question",
+      "kind": "research",
+      "title": "Why do this",
+      "body": "",
+      "status": "active",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "created_at": "2026-10-11T22:53:34Z",
+      "updated_at": "2026-10-11T22:53:34Z"
+    },
+    "d5": {
+      "id": "d5",
+      "type": "decision",
+      "kind": null,
+      "title": "Exploring the functional aspects",
+      "body": "",
+      "status": "active",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "created_at": "2026-10-11T22:53:34Z",
+      "updated_at": "2026-10-11T22:53:34Z"
+    },
+    "q6": {
+      "id": "q6",
+      "type": "question",
+      "kind": "functional",
+      "title": "What are all the possible features?",
+      "body": "Explore all possible features and categorize them based on importance, feasibility\n\n- Add one sub-tree per feature: dtree add <tree> -p <this question> -t tree --mode feature-planning --title \"Feature: X\"\n- Link features that depend on each other.",
+      "status": "active",
+      "parent": "d5",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-11T22:53:57Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "body",
+          "from": "Explore all possible features and categorize them based on importance, feasibility",
+          "to": "Explore all possible features and categorize them based on importance, feasibility\n\n- Add one sub-tree per feature: dtree add <tree> -p <this question> -t tree --mode feature-planning --title \"Feature: X\"\n- Link features that depend on each other."
+        }
+      ],
+      "created_by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "created_at": "2026-10-11T22:53:34Z",
+      "updated_at": "2026-10-11T22:53:57Z"
+    },
+    "s7": {
+      "id": "s7",
+      "type": "tree",
+      "kind": null,
+      "title": "One feature tree for each possible feature",
+      "body": "",
+      "status": "active",
+      "parent": "q6",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "created_at": "2026-10-11T22:53:34Z",
+      "updated_at": "2026-10-11T22:53:34Z",
+      "mode": "feature-planning",
+      "config": {
+        "fields": {
+          "body": {
+            "name": "Body",
+            "type": "text_body"
+          },
+          "pros": {
+            "name": "Pros",
+            "type": "list"
+          },
+          "cons": {
+            "name": "Cons",
+            "type": "list"
+          },
+          "rationale": {
+            "name": "Rationale",
+            "type": "text_body"
+          },
+          "assignee": {
+            "name": "Assignee",
+            "type": "text"
+          }
+        },
+        "link_types": {
+          "relates-to": {
+            "name": "Relates to"
+          },
+          "depends-on": {
+            "name": "Depends on"
+          },
+          "blocks": {
+            "name": "Blocks"
+          },
+          "supersedes": {
+            "name": "Supersedes"
+          },
+          "duplicates": {
+            "name": "Duplicates"
+          }
+        },
+        "statuses": {
+          "active": {
+            "name": "Active",
+            "role": "open"
+          },
+          "accepted": {
+            "name": "Accepted",
+            "role": "accepted"
+          },
+          "rejected": {
+            "name": "Rejected",
+            "role": "rejected"
+          },
+          "pending": {
+            "name": "Pending",
+            "role": "waiting"
+          }
+        },
+        "comments": {
+          "threads": true
+        },
+        "review": {
+          "required_kinds": [
+            "why",
+            "what",
+            "how",
+            "where"
+          ]
+        },
+        "kinds": [
+          "why",
+          "what",
+          "how",
+          "where",
+          "who",
+          "when",
+          "risk",
+          "other"
+        ],
+        "labels": []
+      }
+    },
+    "q8": {
+      "id": "q8",
+      "type": "question",
+      "kind": "functional",
+      "title": "Who are all the possible users/ benefitors?",
+      "body": "Who benefits from this  and why? Explore all the possibility of types of user-bases, how would they benefit, and rank them by their usage",
+      "status": "active",
+      "parent": "d5",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "created_at": "2026-10-11T22:53:34Z",
+      "updated_at": "2026-10-11T22:53:34Z"
+    },
+    "d12": {
+      "id": "d12",
+      "type": "decision",
+      "kind": null,
+      "title": "What is the phase 0 of the project?",
+      "body": "",
+      "status": "active",
+      "parent": "g1",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "created_at": "2026-10-11T23:17:19Z",
+      "updated_at": "2026-10-11T23:17:19Z"
+    },
+    "q13": {
+      "id": "q13",
+      "type": "question",
+      "kind": "technical",
+      "title": "What are the possible phase 0 plans",
+      "body": "",
+      "status": "active",
+      "parent": "d12",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-10-11T23:18:50Z",
+          "by": {
+            "name": "Vineet",
+            "type": "human"
+          },
+          "field": "kind",
+          "from": null,
+          "to": "technical"
+        }
+      ],
+      "created_by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "created_at": "2026-10-11T23:17:32Z",
+      "updated_at": "2026-10-11T23:18:50Z"
+    },
+    "q14": {
+      "id": "q14",
+      "type": "question",
+      "kind": "research",
+      "title": "What are some of research questions to be explored to get current context for the project?",
+      "body": "",
+      "status": "active",
+      "parent": "d5",
+      "pros": [],
+      "cons": [],
+      "rationale": "",
+      "assignee": "",
+      "chosen": null,
+      "links": [],
+      "comments": [],
+      "history": [],
+      "created_by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "created_at": "2026-10-11T23:18:32Z",
+      "updated_at": "2026-10-11T23:18:32Z"
+    }
+  },
+  "activity": [
+    {
+      "at": "2026-10-11T22:53:34Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "g1",
+      "detail": "goal: Plan a project"
+    },
+    {
+      "at": "2026-10-11T22:53:34Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "q2",
+      "detail": "question: Which features make up this project?"
+    },
+    {
+      "at": "2026-10-11T22:53:34Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "s3",
+      "detail": "tree: Feature: Example"
+    },
+    {
+      "at": "2026-10-11T22:53:34Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "q4",
+      "detail": "question: Why do this"
+    },
+    {
+      "at": "2026-10-11T22:53:34Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "d5",
+      "detail": "decision: Exploring the functional aspects"
+    },
+    {
+      "at": "2026-10-11T22:53:34Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "q6",
+      "detail": "question: What are all the possible features?"
+    },
+    {
+      "at": "2026-10-11T22:53:34Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "s7",
+      "detail": "tree: One feature tree for each possible feature"
+    },
+    {
+      "at": "2026-10-11T22:53:34Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "q8",
+      "detail": "question: Who are all the possible users/ benefitors?"
+    },
+    {
+      "at": "2026-10-11T22:53:34Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "template",
+      "node": "g1",
+      "detail": "plan (project): 7 node(s)"
+    },
+    {
+      "at": "2026-10-11T22:53:57Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "q6",
+      "detail": "body"
+    },
+    {
+      "at": "2026-10-11T22:54:02Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "delete",
+      "node": "q2",
+      "detail": "2 node(s)"
+    },
+    {
+      "at": "2026-10-11T22:59:33Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "q9",
+      "detail": "question: What are the possible implementation plans"
+    },
+    {
+      "at": "2026-10-11T23:00:17Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "s10",
+      "detail": "tree: technical-plan"
+    },
+    {
+      "at": "2026-10-11T23:01:04Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "q11",
+      "detail": "question: What are the possible interface designs?"
+    },
+    {
+      "at": "2026-10-11T23:16:13Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "delete",
+      "node": "s10",
+      "detail": "2 node(s)"
+    },
+    {
+      "at": "2026-10-11T23:16:40Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "delete",
+      "node": "q9",
+      "detail": "1 node(s)"
+    },
+    {
+      "at": "2026-10-11T23:17:19Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "d12",
+      "detail": "decision: What is the phase 0 of the project?"
+    },
+    {
+      "at": "2026-10-11T23:17:32Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "q13",
+      "detail": "question: What are the possible phase 0 plans"
+    },
+    {
+      "at": "2026-10-11T23:18:32Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "add",
+      "node": "q14",
+      "detail": "question: What are some of research questions to be explored to get current context for the project?"
+    },
+    {
+      "at": "2026-10-11T23:18:50Z",
+      "by": {
+        "name": "Vineet",
+        "type": "human"
+      },
+      "action": "update",
+      "node": "q13",
+      "detail": "kind=technical"
+    }
+  ],
+  "template": "plan",
+  "config": {
+    "fields": {
+      "body": {
+        "name": "Body",
+        "type": "text_body"
+      }
+    },
+    "link_types": {
+      "relates-to": {
+        "name": "Relates to"
+      },
+      "child": {
+        "name": "child"
+      }
+    },
+    "statuses": {
+      "active": {
+        "name": "Active",
+        "role": "open"
+      },
+      "accepted": {
+        "name": "Accepted",
+        "role": "accepted"
+      },
+      "rejected": {
+        "name": "Rejected",
+        "role": "rejected"
+      }
+    },
+    "comments": {
+      "threads": true
+    },
+    "review": {
+      "required_kinds": []
+    },
+    "kinds": [
+      "functional",
+      "technical",
+      "research"
+    ],
+    "labels": []
+  },
+  "draft": {
+    "mode": "plan",
+    "extends": "default"
+  }
+}

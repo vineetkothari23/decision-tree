@@ -1,0 +1,37 @@
+template: 1
+name: plan
+title: Plan a project
+description: |-
+  Break a project into features. Each feature is a feature-planning sub-tree with its own
+  why/what/how/where questions; add one per feature under "Features".
+extends: default
+config:
+  link_types:
+    child:
+      name: child
+  kinds: [functional, technical, research]
+nodes:
+  - title: Which features make up this project?
+    body: |-
+      - Add one sub-tree per feature: dtree add <tree> -p <this question> -t tree --mode feature-planning --title "Feature: X"
+      - Link features that depend on each other.
+    children:
+      - title: "Feature: Example"
+        type: tree
+        mode: feature-planning
+        body: Rename or delete this example feature.
+  - title: Why do this
+    kind: research
+  - title: Exploring the functional aspects
+    type: decision
+    children:
+      - title: What are all the possible features?
+        kind: functional
+        body: Explore all possible features and categorize them based on importance, feasibility
+        children:
+          - title: One feature tree for each possible feature
+            type: tree
+            mode: feature-planning
+      - title: Who are all the possible users/ benefitors?
+        kind: functional
+        body: Who benefits from this  and why? Explore all the possibility of types of user-bases, how would they benefit, and rank them by their usage
